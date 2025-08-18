@@ -176,6 +176,7 @@ export function Dashboard() {
 
   // If vendor, show vendor-specific stats
   let dashboardStats;
+  
   if (role === "vendor" && stats && (stats as any).totalProducts !== undefined) {
     dashboardStats = [
       {

@@ -199,6 +199,14 @@ export function ContactQueriesManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredQueries.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center font-semibold text-gray-500">
+                      No queries found.
+                    </TableCell>
+                  </TableRow>
+                )}
+                
               </TableBody>
             </Table>
           </div>

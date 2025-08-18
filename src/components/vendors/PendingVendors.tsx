@@ -144,9 +144,10 @@ export function PendingVendors() {
     setIsAddVendorOpen(true);
   };
 
-  const filteredVendors = vendors.filter((vendor) =>
-    vendor?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase())
-  );
+const filteredVendors = vendors.filter((vendor) =>
+  (vendor?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
+  vendor?.email?.toLowerCase()?.includes(searchTerm?.toLowerCase()))
+);
 
   const onSubmit = async (values) => {
     console.log("Submitting vendor:", values);
@@ -446,16 +447,24 @@ export function PendingVendors() {
             <TableBody>
               {filteredVendors.map((vendor) => (
                 <TableRow key={vendor.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium">{vendor.name}</TableCell>
-                  <TableCell>{vendor.email}</TableCell>
-                  <TableCell>{vendor.shopname}</TableCell>
+                  <TableCell className="font-medium">
+                    {vendor.name || "Not provided"}
+                  </TableCell>
+                  <TableCell>{vendor.email || "Not provided"}</TableCell>
+                  <TableCell>{vendor.shopname || "Not provided"}</TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(vendor.status)}>
+                    <Badge
+                      className={
+                        getStatusColor(vendor.status) + " pointer-events-none"
+                      }
+                    >
                       {vendor.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {new Date(vendor.createdAt).toLocaleDateString()}
+                    {vendor.createdAt
+                      ? new Date(vendor.createdAt).toLocaleDateString()
+                      : "N/A"}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end space-x-2">
@@ -493,6 +502,16 @@ export function PendingVendors() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredVendors.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center font-semibold text-gray-800"
+                  >
+                    No pending vendors found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

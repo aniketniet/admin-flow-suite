@@ -381,7 +381,7 @@ export function OrderManagement() {
                       {getPaymentMethodName(order.paymentMode)}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(order.status)}>
+                      <Badge className={getStatusColor(order.status) + " pointer-events-none"}>
                         {order.status}
                       </Badge>
                     </TableCell>
@@ -437,6 +437,16 @@ export function OrderManagement() {
                   </TableRow>
                 );
               })}
+              {filteredOrders.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="text-center text-sm text-gray-500"
+                  >
+                    No orders found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

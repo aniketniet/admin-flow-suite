@@ -602,6 +602,15 @@ export function SubSubCategoryManagement() {
                   </TableCell>
                 </TableRow>
               ))}
+
+              {filteredCategories.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center font-semibold text-gray-800">
+                    No sub-categories found.
+                  </TableCell>
+                </TableRow>
+              )}
+              
             </TableBody>
           </Table>
         </CardContent>

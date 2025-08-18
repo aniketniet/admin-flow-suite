@@ -246,7 +246,7 @@ export function TransactionManagement() {
                     ₹{transaction.amount.toLocaleString()}
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(transaction.status)}>
+                    <Badge className={getStatusColor(transaction.status) + " pointer-events-none"}>
                       {transaction.status}
                     </Badge>
                   </TableCell>
@@ -261,6 +261,18 @@ export function TransactionManagement() {
                   </TableCell>
                 </TableRow>
               ))}
+
+              {filteredTransactions.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="text-center text-sm text-gray-500"
+                  >
+                    No transactions found.
+                  </TableCell>
+                </TableRow>
+              )}
+              
             </TableBody>
           </Table>
         </CardContent>

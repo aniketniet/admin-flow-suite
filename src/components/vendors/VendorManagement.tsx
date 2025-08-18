@@ -450,7 +450,7 @@ export function VendorManagement() {
                     <TableCell>{vendor.email}</TableCell>
                     <TableCell>{vendor.role}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(vendor.status)}>
+                      <Badge className={getStatusColor(vendor.status) + " pointer-events-none"}>
                         {vendor.status}
                       </Badge>
                     </TableCell>
@@ -506,8 +506,19 @@ export function VendorManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredVendors.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-center font-semibold text-gray-800"
+                    >
+                      No vendors found.
+                    </TableCell>
+                  </TableRow>
+                )}
+
               </TableBody>
-            </Table>
+            </Table>            
           </CardContent>
         </Card>
       </div>

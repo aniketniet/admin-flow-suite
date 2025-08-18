@@ -201,7 +201,11 @@ export function ProductManagement() {
   };
 
   const getStatusText = (stock: number) => {
-    return stock > 0 ? "In Stock" : "Out of Stock";
+    return (
+      <span className="text-xs">
+        {stock > 0 ? "In Stock" : "Out of Stock"}
+      </span>
+    );
   };
 
   const filteredProducts = products.filter((product) => {
@@ -407,7 +411,7 @@ export function ProductManagement() {
                     <Badge
                       className={getStatusColor(
                         product.variants[0]?.stock || 0
-                      )}
+                      ) + " pointer-events-none"}
                     >
                       {getStatusText(product.variants[0]?.stock || 0)}
                     </Badge>
@@ -450,6 +454,16 @@ export function ProductManagement() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredProducts.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    className="text-center text-sm text-gray-500"
+                  >
+                    No products found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
 

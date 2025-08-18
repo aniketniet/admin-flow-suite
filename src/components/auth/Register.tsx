@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../ui/button";
-import {toast} from "sonner";
+import { toast } from "sonner";
 
 // Step 1: Email, Phone & Password Component
 type EmailPhoneStepProps = {
@@ -84,19 +84,25 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
       const data = await response.json();
 
       localStorage.setItem("tempToken", data.tempToken || ""); // Store tempToken for later use
-      
-      console.log("Registration response:", data);  
+
+      console.log("Registration response:", data);
       // localStorage.setItem("tempToken", data.tempToken); // Store tempToken for later use
       // If Prisma error, show toast with formatted error
-      if (data?.error && typeof data.error === "string" && data.error.includes("prisma")) {
+      if (
+        data?.error &&
+        typeof data.error === "string" &&
+        data.error.includes("prisma")
+      ) {
         setError("A user with this email already exists.");
         toast.error(
           <div>
             <div className="font-semibold mb-1">Registration Error</div>
             <div>
-              {data.error.includes("Admin_email_key")
-                ? "A user with this email already exists."
-                : <pre className="whitespace-pre-wrap text-xs">{data.error}</pre>}
+              {data.error.includes("Admin_email_key") ? (
+                "A user with this email already exists."
+              ) : (
+                <pre className="whitespace-pre-wrap text-xs">{data.error}</pre>
+              )}
             </div>
           </div>
         );
@@ -276,14 +282,20 @@ const OtpVerificationStep = ({
 
       if (!response.ok) {
         setError(data?.message || "OTP verification failed. Please try again.");
-        toast.error(data?.message || "OTP verification failed. Please try again.");
+        toast.error(
+          data?.message || "OTP verification failed. Please try again."
+        );
         setIsLoading(false);
         return;
       }
 
       if (!data?.token) {
-        setError("Verification succeeded but no token received. Please contact support.");
-        toast.error("Verification succeeded but no token received. Please contact support.");
+        setError(
+          "Verification succeeded but no token received. Please contact support."
+        );
+        toast.error(
+          "Verification succeeded but no token received. Please contact support."
+        );
         setIsLoading(false);
         return;
       }
@@ -291,8 +303,12 @@ const OtpVerificationStep = ({
       try {
         localStorage.setItem("vendorToken", data.token);
       } catch (storageErr) {
-        setError("Could not save authentication token. Please check your browser settings.");
-        toast.error("Could not save authentication token. Please check your browser settings.");
+        setError(
+          "Could not save authentication token. Please check your browser settings."
+        );
+        toast.error(
+          "Could not save authentication token. Please check your browser settings."
+        );
         setIsLoading(false);
         return;
       }
@@ -310,72 +326,73 @@ const OtpVerificationStep = ({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">
-        OTP Verification
-      </h2>
-      <p className="text-gray-600">Enter the OTP sent to {formData.phone}</p>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          OTP Verification
+        </h2>
+        <p className="text-gray-600">Enter the OTP sent to {formData.phone}</p>
       </div>
 
       <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">
-        Enter OTP
-      </label>
-      <input
-        type="text"
-        value={formData.otp}
-        onChange={(e) => updateFormData("otp", e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-        placeholder="Enter 4-digit OTP"
-        maxLength={4}
-      />
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Enter OTP
+        </label>
+        <input
+          type="text"
+          value={formData.otp}
+          onChange={(e) => updateFormData("otp", e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+          placeholder="Enter 4-digit OTP"
+          maxLength={4}
+        />
       </div>
 
       <button
-      onClick={handleSubmit}
-      disabled={isLoading}
-      className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
+        onClick={handleSubmit}
+        disabled={isLoading}
+        className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
       >
-      {isLoading ? "Verifying..." : "Verify OTP"}
+        {isLoading ? "Verifying..." : "Verify OTP"}
       </button>
 
       <div className="mt-4 text-center">
-      <button
-        type="button"
-        disabled={isLoading}
-        className="text-blue-600 hover:underline text-sm"
-        onClick={async () => {
-        setIsLoading(true);
-        setError("");
-        try {
-          const response = await fetch(
-          `${import.meta.env.VITE_BASE_UR}public/vendor-resend-otp`,
-          {
-            method: "POST",
-            headers: {
-            "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ tempToken: localStorage.getItem("tempToken") || "" }),
-           
-          }
-          );
-          const data = await response.json();
-          localStorage.setItem("tempToken", data.tempToken || ""); // Update tempToken if needed
-          if (response.ok) {
-          toast.success("OTP resent successfully!");
-          } else {
-          setError(data.message || "Failed to resend OTP.");
-          toast.error(data.message || "Failed to resend OTP.");
-          }
-        } catch (err) {
-          setError("Network error. Please try again.");
-          toast.error("Network error. Please try again.");
-        } finally {
-          setIsLoading(false);
-        }
-        }}
-      >
-        Resend OTP
-      </button>
+        <button
+          type="button"
+          disabled={isLoading}
+          className="text-blue-600 hover:underline text-sm"
+          onClick={async () => {
+            setIsLoading(true);
+            setError("");
+            try {
+              const response = await fetch(
+                `${import.meta.env.VITE_BASE_UR}public/vendor-resend-otp`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    tempToken: localStorage.getItem("tempToken") || "",
+                  }),
+                }
+              );
+              const data = await response.json();
+              localStorage.setItem("tempToken", data.tempToken || ""); // Update tempToken if needed
+              if (response.ok) {
+                toast.success("OTP resent successfully!");
+              } else {
+                setError(data.message || "Failed to resend OTP.");
+                toast.error(data.message || "Failed to resend OTP.");
+              }
+            } catch (err) {
+              setError("Network error. Please try again.");
+              toast.error("Network error. Please try again.");
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+        >
+          Resend OTP
+        </button>
       </div>
     </div>
   );
@@ -394,8 +411,21 @@ const GstDetailsStep = ({
       setError("Please enter GSTIN number");
       return;
     }
-    onNext();
-  };
+    
+  if (!formData.gstinNumber && !formData.eidNumber) {
+    setError("Please enter GSTIN number");
+    toast.error("Please enter GSTIN number");
+    return;
+  }
+
+  if (formData.gstinNumber && formData.gstinNumber.length !== 15) {
+    setError("Please enter a valid 15-digit GSTIN number");
+    toast.error("Please enter a valid 15-digit GSTIN number");
+    return;
+  }
+
+  onNext();
+}
 
   return (
     <div className="space-y-6">
@@ -430,9 +460,7 @@ const GstDetailsStep = ({
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
           placeholder="Enter EID number (if available)"
         />
-        <p className="text-sm text-gray-500 mt-1">
-          Enrolment ID  (optional)
-        </p>
+        <p className="text-sm text-gray-500 mt-1">Enrolment ID (optional)</p>
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -452,8 +480,6 @@ const GstDetailsStep = ({
     </div>
   );
 };
-
-
 
 // Step 4: Pickup Address Component
 const PickupAddressStep = ({
@@ -475,35 +501,41 @@ const PickupAddressStep = ({
         const response = await fetch(
           "https://countriesnow.space/api/v0.1/countries/states"
         );
-        
+
         if (!response.ok) {
           throw new Error("Failed to fetch countries");
         }
-        
+
         const data = await response.json();
-        
+
         if (data.error === false) {
           setCountries(data.data);
-          
+
           // Set default country if not already set
           if (!formData.country) {
-            const defaultCountry = data.data.find(c => c.name === '') || 
-                                 data.data[0];
+            const defaultCountry =
+              data.data.find((c) => c.name === "") || data.data[0];
             if (defaultCountry) {
-              updateFormData('country', defaultCountry.name);
+              updateFormData("country", defaultCountry.name);
               // Fetch states for default country
               fetchStates(defaultCountry.name);
             }
           }
         }
       } catch (error) {
-        console.error('Error fetching countries:', error);
-        setError('Failed to load countries. Please try again.');
-        
+        console.error("Error fetching countries:", error);
+        setError("Failed to load countries. Please try again.");
+
         // Fallback data in case API fails
         setCountries([
-          { name: 'India', states: [{ name: 'Delhi' }, { name: 'Maharashtra' }] },
-          { name: 'United States', states: [{ name: 'California' }, { name: 'Texas' }] }
+          {
+            name: "India",
+            states: [{ name: "Delhi" }, { name: "Maharashtra" }],
+          },
+          {
+            name: "United States",
+            states: [{ name: "California" }, { name: "Texas" }],
+          },
         ]);
       } finally {
         setLoadingCountries(false);
@@ -518,21 +550,21 @@ const PickupAddressStep = ({
       setStates([]);
       return;
     }
-    
+
     setLoadingStates(true);
     try {
       const response = await fetch(
         "https://countriesnow.space/api/v0.1/countries/states"
       );
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch states");
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error === false) {
-        const country = data.data.find(c => c.name === countryName);
+        const country = data.data.find((c) => c.name === countryName);
         if (country) {
           setStates(country.states || []);
         } else {
@@ -540,8 +572,8 @@ const PickupAddressStep = ({
         }
       }
     } catch (error) {
-      console.error('Error fetching states:', error);
-      setError('Failed to load states. Please try again.');
+      console.error("Error fetching states:", error);
+      setError("Failed to load states. Please try again.");
       setStates([]);
     } finally {
       setLoadingStates(false);
@@ -549,22 +581,55 @@ const PickupAddressStep = ({
   };
 
   const handleCountryChange = (countryName) => {
-    updateFormData('country', countryName);
-    updateFormData('state', '');
+    updateFormData("country", countryName);
+    updateFormData("state", "");
     fetchStates(countryName);
   };
 
   const handleSubmit = () => {
-    if (
-      !formData.address ||
-      !formData.city ||
-      !formData.state ||
-      !formData.pincode ||
-      !formData.country
-    ) {
-      setError("Please fill in all address fields");
+       if (!formData.pickupLocation) {
+      setError("Please fill in your pickup location");
       return;
     }
+  
+    if (formData.pincode.length !== 6) {
+      setError("Please enter a valid 6-digit PIN code");
+      return;
+    }
+    if (!formData.gstinNumber) {
+      setError("Please fill in your GSTIN number");
+      return;
+    }
+    if (!formData.plot_no) {
+      setError("Please fill in your plot number");
+      return;
+    }
+    if (isNaN(Number(formData.plot_no))) {
+      setError("Plot number must be a number");
+      return;
+    }
+
+    if (!formData.city || !formData.state || !formData.pincode) {
+      setError("Please fill in your city, state and pincode");
+      return;
+    }
+
+    if (!formData.country) {
+      setError("Please select a country");
+      return;
+    }
+
+    if (formData.gstinNumber.length !== 15) {
+      setError("Please enter a valid 15-digit GSTIN number");
+      return;
+    }
+
+    if (formData.plot_no.length === 0) {
+      setError("Please fill in your plot number");
+      return;
+    }
+    
+
     onNext();
   };
 
@@ -583,6 +648,7 @@ const PickupAddressStep = ({
         </label>
         <input
           type="text"
+          required
           value={formData.pickupLocation || ""}
           onChange={(e) => updateFormData("pickupLocation", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
@@ -594,17 +660,61 @@ const PickupAddressStep = ({
         </p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Complete Address
-        </label>
-        <textarea
-          value={formData.address}
-          onChange={(e) => updateFormData("address", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-          placeholder="Plot No. 12, New Palam Vihar, Phase 1, Gurugram,"
-          rows={3}
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Plot No.
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.plot_no || ""}
+            onChange={(e) => updateFormData("plot_no", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="Plot No."
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Building
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.building || ""}
+            onChange={(e) => updateFormData("building", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="Building"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Street
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.street || ""}
+            onChange={(e) => updateFormData("street", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="Street"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Area
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.area || ""}
+            onChange={(e) => updateFormData("area", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="Area"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -680,6 +790,7 @@ const PickupAddressStep = ({
           <input
             type="text"
             value={formData.pincode}
+            required
             onChange={(e) => updateFormData("pincode", e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
             placeholder="6-digit PIN code"
@@ -703,12 +814,11 @@ const PickupAddressStep = ({
         disabled={isLoading || loadingCountries}
         className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
       >
-        {isLoading ? 'Processing...' : 'Continue'}
+        {isLoading ? "Processing..." : "Continue"}
       </button>
     </div>
   );
 };
-
 
 // Step 5: Bank Details Component
 const BankDetailsStep = ({
@@ -753,6 +863,7 @@ const BankDetailsStep = ({
         <input
           type="text"
           value={formData.bankName || ""}
+          required
           onChange={(e) => updateFormData("bankName", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
           placeholder="Enter bank name"
@@ -766,6 +877,7 @@ const BankDetailsStep = ({
         <input
           type="text"
           value={formData.accountNumber}
+          required
           onChange={(e) => updateFormData("accountNumber", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
           placeholder="Enter account number"
@@ -779,6 +891,7 @@ const BankDetailsStep = ({
         <input
           type="text"
           value={formData.confirmAccountNumber}
+          required
           onChange={(e) =>
             updateFormData("confirmAccountNumber", e.target.value)
           }
@@ -794,8 +907,9 @@ const BankDetailsStep = ({
         <input
           type="text"
           value={formData.ifscCode}
+          required
           onChange={(e) =>
-        updateFormData("ifscCode", e.target.value.toUpperCase())
+            updateFormData("ifscCode", e.target.value.toUpperCase())
           }
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
           placeholder="Enter IFSC code"
@@ -821,9 +935,33 @@ const SupplierDetailsStep = ({
   setIsLoading,
   setError,
 }) => {
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.businessName || !formData.supplierName) {
-      setError("Please fill in all required fields");
+      setError("Please fill in your business and supplier name");
+      return;
+    }
+    if (!formData.city || !formData.state || !formData.pincode) {
+      setError("Please fill in your city, state and pincode");
+      return;
+    }
+
+    if (formData.pincode.length !== 6) {
+      setError("Please enter a valid 6-digit PIN code");
+      return;
+    }
+
+    if (!formData.gstinNumber) {
+      setError("Please fill in your GSTIN number");
+      return;
+    }
+
+    if (!formData.plot_no) {
+      setError("Please fill in your plot number");
+      return;
+    }
+    if (isNaN(Number(formData.plot_no))) {
+      setError("Plot number must be a number");
       return;
     }
 
@@ -845,7 +983,10 @@ const SupplierDetailsStep = ({
             name: formData.supplierName,
             shopname: formData.businessName,
             pickup_location: formData.pickupLocation || "",
-            address: formData.address,
+            plot_no: formData.plot_no || "",
+            building: formData.building || "",
+            street: formData.street || "",
+            area: formData.area || "",
             city: formData.city,
             state: formData.state,
             country: formData.country || "",
@@ -863,9 +1004,8 @@ const SupplierDetailsStep = ({
 
       if (response.ok) {
         toast.success("Registration successful! Welcome to Shopinger!");
-
         // Redirect to dashboard or login page
-        window.location.href = "https://shopinger.co.in/admin/login"; // Adjust the redirect as needed
+        window.location.replace("https://shopinger.co.in/admin/login"); // Use replace to avoid back navigation
       } else {
         // Try to parse error details if present
         let errorMessages = [];
@@ -894,7 +1034,9 @@ const SupplierDetailsStep = ({
             <div>
               {errorMessages.length > 0
                 ? errorMessages.map((msg, idx) => (
-                    <div key={idx} className="text-xs whitespace-pre-wrap">{msg}</div>
+                    <div key={idx} className="text-xs whitespace-pre-wrap">
+                      {msg}
+                    </div>
                   ))
                 : errorMsg}
             </div>
@@ -926,6 +1068,7 @@ const SupplierDetailsStep = ({
         </label>
         <input
           type="text"
+          required
           value={formData.businessName}
           onChange={(e) => updateFormData("businessName", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
@@ -943,6 +1086,7 @@ const SupplierDetailsStep = ({
         <input
           type="text"
           value={formData.supplierName}
+          required
           onChange={(e) => updateFormData("supplierName", e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
           placeholder="Enter supplier name"
@@ -970,7 +1114,10 @@ const ShopingerRegistration = () => {
     password: "",
     otp: "",
     gstinNumber: "",
-    address: "",
+    plot_no: "",
+    building: "",
+    street: "",
+    area: "",
     country: "",
     pickupLocation: "",
     bankName: "",
@@ -1042,66 +1189,62 @@ const ShopingerRegistration = () => {
     setCurrentStep(currentStep - 1);
   };
 
-const StepIndicator = () => (
-  <div className="w-full overflow-x-auto px-4">
-    <div className="flex items-start justify-between min-w-max md:min-w-full mx-auto max-w-screen-lg">
-      {steps.map((step, index) => (
-        <React.Fragment key={step.number}>
-          {/* Container for a single step (icon + title) */}
-          <div className="flex flex-col items-center flex-1 relative">
-            {/* Connector Line (placed before steps except first) */}
-            {index > 0 && (
-              <div
-                className={`absolute left-0 right-1/2 h-0.5 top-4 ${
-                  steps[index - 1].completed ? "bg-[#FF710B]" : "bg-gray-200"
-                }`}
-              />
-            )}
-
-            {/* Step Icon */}
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium relative z-10 ${
-                step.completed
-                  ? "bg-[#FF710B] text-white"
-                  : step.number === currentStep
-                  ? "bg-gray-400 text-white"
-                  : "bg-gray-200 text-gray-500"
-              }`}
-            >
-              {step.completed ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                step.icon
+  const StepIndicator = () => (
+    <div className="w-full overflow-x-auto px-4">
+      <div className="flex items-start justify-between min-w-max md:min-w-full mx-auto max-w-screen-lg">
+        {steps.map((step, index) => (
+          <React.Fragment key={step.number}>
+            {/* Container for a single step (icon + title) */}
+            <div className="flex flex-col items-center flex-1 relative">
+              {/* Connector Line (placed before steps except first) */}
+              {index > 0 && (
+                <div
+                  className={`absolute left-0 right-1/2 h-0.5 top-4 ${
+                    steps[index - 1].completed ? "bg-[#FF710B]" : "bg-gray-200"
+                  }`}
+                />
               )}
-            </div>
 
-            {/* Step Title */}
-            <div className="mt-2 text-center px-1">
-              <span
-                className={`text-xs break-words ${
-                  step.number === currentStep
-                    ? "font-semibold text-gray-800"
-                    : "text-gray-500"
+              {/* Step Icon */}
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium relative z-10 ${
+                  step.completed
+                    ? "bg-[#FF710B] text-white"
+                    : step.number === currentStep
+                    ? "bg-gray-400 text-white"
+                    : "bg-gray-200 text-gray-500"
                 }`}
               >
-                {step.title}
-              </span>
-            </div>
+                {step.completed ? <Check className="w-5 h-5" /> : step.icon}
+              </div>
 
-            {/* Connector Line (placed after steps except last) */}
-            {index < steps.length - 1 && (
-              <div
-                className={`absolute left-1/2 right-0 h-0.5 top-4 ${
-                  step.completed ? "bg-[#FF710B]" : "bg-gray-200"
-                }`}
-              />
-            )}
-          </div>
-        </React.Fragment>
-      ))}
+              {/* Step Title */}
+              <div className="mt-2 text-center px-1">
+                <span
+                  className={`text-xs break-words ${
+                    step.number === currentStep
+                      ? "font-semibold text-gray-800"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {step.title}
+                </span>
+              </div>
+
+              {/* Connector Line (placed after steps except last) */}
+              {index < steps.length - 1 && (
+                <div
+                  className={`absolute left-1/2 right-0 h-0.5 top-4 ${
+                    step.completed ? "bg-[#FF710B]" : "bg-gray-200"
+                  }`}
+                />
+              )}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
     </div>
-  </div>
-);
+  );
   const renderStep = () => {
     const commonProps = {
       formData,
@@ -1131,64 +1274,64 @@ const StepIndicator = () => (
   };
 
   return (
-<div className="flex min-h-screen bg-gray-50">
-  {/* Left side with image - takes 50% width on medium screens and up */}
-  <div className="hidden md:flex md:w-1/2 bg-gray-900 items-center justify-center p-8">
-    <img
-      src="loginSideBanner.png"
-      alt="Signup illustration"
-      className="max-w-full h-auto object-contain"
-    />
-  </div>
-
-  {/* Right side with form content - takes full width on mobile, 50% on medium screens and up */}
-  <div className="w-full md:w-1/2 p-4 md:p-8 flex flex-col">
-    <div className="text-center relative">
-      <div className="text-center mb-8">
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Left side with image - takes 50% width on medium screens and up */}
+      <div className="hidden md:flex md:w-1/2 bg-gray-900 items-center justify-center p-8">
         <img
-          src="logo.png"
-          alt="Shopinger Logo"
-          className="mx-auto h-12 w-auto mb-2"
+          src="loginSideBanner.png"
+          alt="Signup illustration"
+          className="max-w-full h-auto object-contain"
         />
       </div>
-      {currentStep > 1 && (
-        <button
-          onClick={handlePrevious}
-          className="absolute left-0 top-0 p-2 hover:bg-gray-200 rounded-full"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-      )}
-    </div>
 
-    <StepIndicator />
-
-    <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600">{error}</p>
+      {/* Right side with form content - takes full width on mobile, 50% on medium screens and up */}
+      <div className="w-full md:w-1/2 p-4 md:p-8 flex flex-col">
+        <div className="text-center relative">
+          <div className="text-center mb-8">
+            <img
+              src="logo.png"
+              alt="Shopinger Logo"
+              className="mx-auto h-12 w-auto mb-2"
+            />
+          </div>
+          {currentStep > 1 && (
+            <button
+              onClick={handlePrevious}
+              className="absolute left-0 top-0 p-2 hover:bg-gray-200 rounded-full"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
         </div>
-      )}
 
-      {renderStep()}
-    </div>
+        <StepIndicator />
 
-    <div className="mt-6 text-center">
-      <p className="text-sm text-gray-600">
-        Already have an account?{" "}
-        <Link to="/login" className="text-blue-600">
-          <Button variant="link" className="p-0">
-            Vendor Login
-          </Button>
-        </Link>
-      </p>
-    </div>
+        <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
 
-    <div className="text-center mt-8 text-sm text-gray-500">
-      <p>© 2025 Shopinger. All rights reserved.</p>
+          {renderStep()}
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Already have an account?{" "}
+            <Link to="/login" className="text-blue-600">
+              <Button variant="link" className="p-0">
+                Vendor Login
+              </Button>
+            </Link>
+          </p>
+        </div>
+
+        <div className="text-center mt-8 text-sm text-gray-500">
+          <p>© 2025 Shopinger. All rights reserved.</p>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   );
 };
 

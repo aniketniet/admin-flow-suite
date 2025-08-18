@@ -171,12 +171,13 @@ const ProductdetailsPage = () => {
                 </div>
               </div>
 
-              <div className="mb-8">
+                <div className="mb-8">
                 <h2 className="text-lg font-medium mb-4">Description</h2>
-                <p className="text-gray-700 leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
+                <div
+                  className="text-gray-700 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: product.description }}
+                />
+                </div>
 
               <div className="mb-8">
                 <h2 className="text-lg font-medium mb-4">Key Benefits</h2>

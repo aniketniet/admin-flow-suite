@@ -322,6 +322,14 @@ const joditConfig = {
         formData.append(`images_0`, image);
       });
 
+      for (let i = 0; i < images.length; i++) {
+        if (images[i].size > 5 * 1024 * 1024) {
+          toast.error(`Image "${images[i].name}" exceeds 5MB size limit.`);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const token = isVendor
         ? Cookies.get("vendor_token")
         : Cookies.get("admin_token");
@@ -330,6 +338,8 @@ const joditConfig = {
         : `${import.meta.env.VITE_BASE_UR}admin/add-product`;
 
       await axios.post(apiUrl, formData, {
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

@@ -41,6 +41,10 @@ interface Category {
   name: string;
   slug: string;
   description: string;
+  igst: string;
+  cgst: string;
+  sgst: string;
+  position: string;
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
@@ -63,6 +67,7 @@ export function CategoryManagement() {
     igst: "",
     cgst: "",
     sgst: "",
+    position: "",
 
   });
   const [addFormData, setAddFormData] = useState({
@@ -72,6 +77,7 @@ export function CategoryManagement() {
     igst: "",
     cgst: "",
     sgst: "",
+    position: "",
   });
   const [imagePreview, setImagePreview] = useState("");
   const [addImagePreview, setAddImagePreview] = useState("");
@@ -146,6 +152,8 @@ export function CategoryManagement() {
       igst: category.igst || "",
       cgst: category.cgst || "",
       sgst: category.sgst || "",
+      position: category.sortOrder || "",
+
     });
     if (category.imgUrl) {
       setImagePreview(`${import.meta.env.VITE_BASE_URL_IMG}${category.imgUrl}`);
@@ -214,6 +222,7 @@ export function CategoryManagement() {
       formData.append("igst", editFormData.igst);
       formData.append("cgst", editFormData.cgst);
       formData.append("sgst", editFormData.sgst);
+      formData.append("sortOrder", editFormData.position);
       if (editFormData.image) {
         formData.append("image", editFormData.image);
       }
@@ -263,6 +272,7 @@ export function CategoryManagement() {
       formData.append("igst", addFormData.igst);
       formData.append("cgst", addFormData.cgst);
       formData.append("sgst", addFormData.sgst);
+      formData.append("sortOrder", addFormData.position);
       if (addFormData.image) {
         formData.append("image", addFormData.image);
       }
@@ -289,6 +299,10 @@ export function CategoryManagement() {
         setAddFormData({
           name: "",
           description: "",
+          igst: "",
+          cgst: "",
+          sgst: "",
+          position: "",
           image: null,
         });
         setAddImagePreview("");
@@ -420,6 +434,24 @@ export function CategoryManagement() {
                     />
                   </div>
                 </div>
+                {/* //position */}
+
+                <div>
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    name="position"
+                    type="number"
+                    min="0"
+                    className="mt-4"
+                    placeholder="Enter position"
+                    value={addFormData.position ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({ ...addFormData, position: e.target.value })
+                    }
+                  />
+                </div>
+
                 <div>
                   <Label htmlFor="image">Category Image</Label>
                   <Input
@@ -591,6 +623,13 @@ export function CategoryManagement() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filteredCategories.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center font-semibold text-gray-800">
+                    No categories found.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -672,6 +711,24 @@ export function CategoryManagement() {
                 />
               </div>
             </div>
+            {/* position */}
+            <div>
+              <Label htmlFor="edit-position">Position</Label>
+              <Input
+                id="edit-position"
+                name="position"
+                type="number"
+                min="0"
+                className="mt-4"
+                placeholder="Enter position"
+                value={editFormData.position ?? ""}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, position: e.target.value })
+                }
+              />
+            </div>
+
+
             <div>
               <Label htmlFor="edit-image">Category Image</Label>
               <Input

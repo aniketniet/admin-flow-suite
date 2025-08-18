@@ -259,9 +259,9 @@ export function RecentOrders() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Recent Orders
-            <Button variant="outline" size="sm">
+            {/* <Button variant="outline" size="sm">
               View All
-            </Button>
+            </Button> */}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -282,14 +282,14 @@ export function RecentOrders() {
                   <TableCell className="font-medium">{order.id}</TableCell>
                   <TableCell>{order.user.name}</TableCell>
                   <TableCell>{formatAmount(order.totalAmount)}</TableCell>
-                  <TableCell>{formatDate(order.createdAt)}</TableCell>
+                  <TableCell>{formatDate(order.createdAt)}</TableCell>  
                   <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
+                    <Badge className={getStatusColor(order.status) + " pointer-events-none"}>
                       {order.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className="bg-purple-100 text-purple-800">
+                    <Badge className="bg-purple-100 text-purple-800 pointer-events-none">
                       {order.paymentMode}
                     </Badge>
                   </TableCell>

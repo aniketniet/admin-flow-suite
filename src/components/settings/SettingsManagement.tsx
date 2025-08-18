@@ -68,7 +68,7 @@ export function SettingsManagement() {
           {/* <TabsTrigger value="appearance">Appearance</TabsTrigger> */}
         </TabsList>
 
-        <TabsContent value="general" className="space-y-6">
+        {/* <TabsContent value="general" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>General Settings</CardTitle>
@@ -119,7 +119,10 @@ export function SettingsManagement() {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </TabsContent> */}
+
+
+        
 
         <TabsContent value="payment" className="space-y-6">
           <Card>
