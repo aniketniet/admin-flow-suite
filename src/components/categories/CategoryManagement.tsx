@@ -45,6 +45,7 @@ interface Category {
   cgst: string;
   sgst: string;
   position: string;
+  sortOrder: string;
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
