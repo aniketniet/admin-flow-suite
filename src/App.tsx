@@ -102,7 +102,7 @@ const adminSectionRoutes = [
   { path: "/orders", key: "orders", element: <OrderManagement /> },
   { path: "/categories", key: "categories", element: <CategoryManagement /> },
   { path: "/subcategories", key: "subcategories", element: <SubCategoryManagement /> },
-  { path: "/sub-sub-categories", key: "subsubcategories", element: <SubSubCategoryManagement/> },
+  { path: "/subsubcategories", key: "subsubcategories", element: <SubSubCategoryManagement/> },
   { path: "/banners", key: "banners", element: <BannerManagement /> },
   { path: "/transactions", key: "transactions", element: <TransactionManagement /> },
   { path: "/pages", key: "pages", element: <StaticPagesManagement /> },

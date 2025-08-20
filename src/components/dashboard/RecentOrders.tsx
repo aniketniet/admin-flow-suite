@@ -124,7 +124,7 @@ export function RecentOrders() {
   };
 
   const formatAmount = (amount: string) => {
-    return `₹${(parseInt(amount) / 100).toFixed(2)}`;
+    return `₹${(parseInt(amount)).toFixed(2)}`;
   };
 
   const formatShortDate = (dateString: string) => {

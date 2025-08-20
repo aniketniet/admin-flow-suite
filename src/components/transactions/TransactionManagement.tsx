@@ -17,7 +17,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Filter, Download, Eye } from "lucide-react";
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  Eye, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronsLeft, 
+  ChevronsRight 
+} from "lucide-react";
 import Cookies from "js-cookie";
 
 interface Transaction {
@@ -32,6 +41,9 @@ interface Transaction {
   status: string;
   createdAt: string;
   updatedAt: string;
+  user?: {
+    name: string;
+  };
 }
 
 export function TransactionManagement() {
@@ -40,6 +52,12 @@ export function TransactionManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalTransactions, setTotalTransactions] = useState(0);
 
   const token = Cookies.get("admin_token");
 
@@ -56,13 +74,11 @@ export function TransactionManagement() {
     }
   };
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (page: number = 1, limit: number = itemsPerPage) => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${
-          import.meta.env.VITE_BASE_UR
-        }admin/get-all-transactions?limit=10&page=1`,
+        `${import.meta.env.VITE_BASE_UR}admin/get-all-transactions?limit=${limit}&page=${page}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -75,7 +91,17 @@ export function TransactionManagement() {
       }
 
       const data = await response.json();
-      setTransactions(data.data);
+      setTransactions(data.data || []);
+      
+      // If the API returns pagination info, use it
+      if (data.totalPages) {
+        setTotalPages(data.totalPages);
+      } else {
+        // Calculate total pages based on total count and items per page
+        const totalCount = data.totalCount || data.data.length;
+        setTotalPages(Math.ceil(totalCount / itemsPerPage));
+        setTotalTransactions(totalCount);
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "An unknown error occurred"
@@ -86,8 +112,8 @@ export function TransactionManagement() {
   };
 
   useEffect(() => {
-    fetchTransactions();
-  }, []);
+    fetchTransactions(currentPage, itemsPerPage);
+  }, [currentPage, itemsPerPage]);
 
   const filteredTransactions = transactions.filter((transaction) => {
     const matchesSearch =
@@ -116,7 +142,69 @@ export function TransactionManagement() {
     };
   };
 
-  const { totalAmount, successCount, totalTransactions } = calculateTotals();
+  const { totalAmount, successCount } = calculateTotals();
+
+  // Pagination controls
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // Generate page numbers for display
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of visible page range
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if we're near the beginning
+      if (currentPage <= 3) {
+        endPage = 4;
+      }
+      
+      // Adjust if we're near the end
+      if (currentPage >= totalPages - 2) {
+        startPage = totalPages - 3;
+      }
+      
+      // Add ellipsis if needed
+      if (startPage > 2) {
+        pages.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (endPage < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      // Always show last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
+  };
 
   if (loading) {
     return (
@@ -153,14 +241,14 @@ export function TransactionManagement() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">
-              {totalTransactions - successCount}
+              {transactions.length - successCount}
             </div>
             <p className="text-sm text-gray-600">Other Transactions</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{totalTransactions}</div>
+            <div className="text-2xl font-bold">{transactions.length}</div>
             <p className="text-sm text-gray-600">Total Transactions</p>
           </CardContent>
         </Card>
@@ -201,16 +289,22 @@ export function TransactionManagement() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
-        </div> */}
+        
+        {/* Items per page selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(e.target.value)}
+            className="border rounded-md p-1 text-sm"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          <span className="text-sm text-gray-600">entries</span>
+        </div>
       </div>
 
       {/* Transactions Table */}
@@ -229,15 +323,14 @@ export function TransactionManagement() {
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Date</TableHead>
-                {/* <TableHead>Product ID</TableHead> */}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((transaction) => (
+              {filteredTransactions.map((transaction, index) => (
                 <TableRow key={transaction.id} className="hover:bg-gray-50">
                   <TableCell>
-                    {filteredTransactions.indexOf(transaction) + 1}
+                    {(currentPage - 1) * itemsPerPage + index + 1}
                   </TableCell>
                   <TableCell>{transaction.order_id}</TableCell>
                   <TableCell>{transaction.payment_id}</TableCell>
@@ -246,14 +339,18 @@ export function TransactionManagement() {
                     ₹{transaction.amount.toLocaleString()}
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(transaction.status) + " pointer-events-none"}>
+                    <Badge
+                      className={
+                        getStatusColor(transaction.status) +
+                        " pointer-events-none"
+                      }
+                    >
                       {transaction.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     {new Date(transaction.createdAt).toLocaleDateString()}
                   </TableCell>
-                  {/* <TableCell>{transaction.product_id}</TableCell> */}
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon">
                       <Eye className="h-4 w-4" />
@@ -272,9 +369,67 @@ export function TransactionManagement() {
                   </TableCell>
                 </TableRow>
               )}
-              
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {transactions.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                {Math.min(currentPage * itemsPerPage, filteredTransactions.length)} of{" "}
+                {filteredTransactions.length} entries
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page numbers */}
+                {getPageNumbers().map((page, index) => (
+                  <Button
+                    key={index}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => typeof page === 'number' && handlePageChange(page)}
+                    disabled={page === '...'}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

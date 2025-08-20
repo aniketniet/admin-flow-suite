@@ -32,6 +32,8 @@ import {
   Edit,
   Trash2,
   Eye,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,11 +62,11 @@ interface SubSubCategory {
   mainCategoryId: number;
   subCategoryId: number;
   name: string;
-  slug: string;
-  description: string;
-  imgUrl: string;
-  createdAt: string;
-  updatedAt: string;
+  slug?: string;
+  description?: string;
+  imgUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface SubCategory {
@@ -83,9 +85,11 @@ export function SubSubCategoryManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]);
+  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>(
+    []
+  );
   const [mainCategories, setMainCategories] = useState<MainCategory[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     id: "",
@@ -95,61 +99,65 @@ export function SubSubCategoryManagement() {
     description: "",
     image: null as File | null,
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [availableSubCategories, setAvailableSubCategories] = useState<SubCategory[]>([]);
+  const [availableSubCategories, setAvailableSubCategories] = useState<
+    SubCategory[]
+  >([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Number of items per page
 
   const token = Cookies.get("admin_token");
 
   const fetchData = async () => {
-      try {
-        setLoading(true);
-        // Fetch main categories with their sub-categories
-        const mainCatResponse = await fetch(
-          `${import.meta.env.VITE_BASE_UR}admin/get-all-main-categories`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const mainCatData = await mainCatResponse.json();
-        if (mainCatData.success) {
-          setMainCategories(mainCatData.categories);
+    try {
+      setLoading(true);
+      // Fetch main categories with their sub-categories
+      const mainCatResponse = await fetch(
+        `${import.meta.env.VITE_BASE_UR}admin/get-all-main-categories`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-
-        // Fetch sub-sub-categories
-        const subSubCatResponse = await fetch(
-          `${import.meta.env.VITE_BASE_UR}admin/get-all-sub-sub-categories`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const subSubCatData = await subSubCatResponse.json();
-        //  subSubCatData = subSubCatData.subSubCategories
-        console.log("Sub-sub-categories data:", subSubCatData);
-        if (subSubCatData.success) {
-          setSubSubCategories(subSubCatData.subSubCategories);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch categories",
-        });
-      } finally {
-        setLoading(false);
+      );
+      const mainCatData = await mainCatResponse.json();
+      if (mainCatData.success) {
+        setMainCategories(mainCatData.categories);
       }
-    };
+
+      // Fetch sub-sub-categories
+      const subSubCatResponse = await fetch(
+        `${import.meta.env.VITE_BASE_UR}admin/get-all-sub-sub-categories`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const subSubCatData = await subSubCatResponse.json();
+      //  subSubCatData = subSubCatData.subSubCategories
+      console.log("Sub-sub-categories data:", subSubCatData);
+      if (subSubCatData.success) {
+        setSubSubCategories(subSubCatData.subSubCategories);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch categories",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-  
-
     fetchData();
   }, [token]);
 
@@ -217,7 +225,9 @@ export function SubSubCategoryManagement() {
       }
 
       const endpoint = formData.id
-        ? `${import.meta.env.VITE_BASE_UR}admin/update-sub-sub-category/${formData.id}`
+        ? `${import.meta.env.VITE_BASE_UR}admin/update-sub-sub-category/${
+            formData.id
+          }`
         : `${import.meta.env.VITE_BASE_UR}admin/add-sub-sub-category`;
 
       const response = await fetch(endpoint, {
@@ -275,15 +285,31 @@ export function SubSubCategoryManagement() {
   };
 
   const handleEditClick = (category: SubSubCategory) => {
-
     setFormData({
       id: (category.id ?? "").toString(),
-      mainCategoryId: (category.mainCategoryId ?? "").toString(),
+      mainCategoryId: (
+        category.subCategory?.mainCategoryId ??
+        category.mainCategoryId ??
+        ""
+      ).toString(),
       subCategoryId: (category.subCategoryId ?? "").toString(),
       name: category.name ?? "",
       description: category.description || "",
       image: null,
     });
+
+    // Set available sub-categories based on selected main category
+    const mainCatId =
+      category.subCategory?.mainCategoryId ?? category.mainCategoryId;
+    const selectedMainCategory = mainCategories.find(
+      (cat) => cat.id === mainCatId
+    );
+
+    if (selectedMainCategory) {
+      setAvailableSubCategories(selectedMainCategory.subCategories);
+    } else {
+      setAvailableSubCategories([]);
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -298,7 +324,9 @@ export function SubSubCategoryManagement() {
     setIsDeleting(true);
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_UR}admin/delete-sub-sub-category/${categoryToDelete}`,
+        `${
+          import.meta.env.VITE_BASE_UR
+        }admin/delete-sub-sub-category/${categoryToDelete}`,
         {
           method: "DELETE",
           headers: {
@@ -345,24 +373,54 @@ export function SubSubCategoryManagement() {
     return matchesSearch;
   });
 
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredCategories.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Go to previous page
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Go to next page
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
 
-  const getMainCategoryName = (id: number) => {
-    const category = mainCategories.find((cat) => cat.id === id);
-    return category ? category.name : "N/A";
-  };
+  // const getMainCategoryName = (id: number) => {
+  //   const category = mainCategories.find((cat) => cat.id === id);
+  //   return category ? category.name : "N/A";
+  // };
 
-  const getSubCategoryName = (mainCatId: number, subCatId: number) => {
-    const mainCategory = mainCategories.find((cat) => cat.id === mainCatId);
-    if (!mainCategory) return "N/A";
-    const subCategory = mainCategory.subCategories.find(
-      (subCat) => subCat.id === subCatId
-    );
-    return subCategory ? subCategory.name : "N/A";
-  };
+  // const getSubCategoryName = (mainCatId: number, subCatId: number) => {
+  //   const mainCategory = mainCategories.find((cat) => cat.id === mainCatId);
+  //   if (!mainCategory) return "N/A";
+  //   const subCategory = mainCategory.subCategories.find(
+  //     (subCat) => subCat.id === subCatId
+  //   );
+  //   return subCategory ? subCategory.name : "N/A";
+  // };
 
   if (loading) {
     return (
@@ -523,9 +581,11 @@ export function SubSubCategoryManagement() {
       </div>
 
       {/* Categories Table */}
-      <Card>
+        <Card>
         <CardHeader>
-          <CardTitle>Sub-Sub-Categories ({filteredCategories?.length})</CardTitle>
+          <CardTitle>
+            Sub-Categories ({filteredCategories.length}) - Page {currentPage} of {totalPages}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -533,8 +593,6 @@ export function SubSubCategoryManagement() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Name</TableHead>
-                {/* <TableHead>Main Category</TableHead> */}
-                {/* <TableHead>Sub-Category</TableHead> */}
                 <TableHead>Description</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Image</TableHead>
@@ -543,25 +601,14 @@ export function SubSubCategoryManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategories?.map((category) => (
+              {currentItems.map((category, index) => (
                 <TableRow key={category.id} className="hover:bg-gray-50">
-                  <TableCell>
-                    {filteredCategories.indexOf(category) + 1}
-                  </TableCell>
+                  <TableCell>{indexOfFirstItem + index + 1}</TableCell>
                   <TableCell>
                     <div className="font-medium">{category.name}</div>
                   </TableCell>
-                  {/* <TableCell>
-                    {getMainCategoryName(category.mainCategoryId)}
-                  </TableCell> */}
-                  {/* <TableCell>
-                    {getSubCategoryName(
-                      category.mainCategoryId,
-                      category.subCategoryId
-                    )}
-                  </TableCell> */}
                   <TableCell className="max-w-xs truncate">
-                    {category.description?.slice(0, 20) || "N/A"}
+                    {category.description?.slice(0, 20) || '-'}
                   </TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
@@ -602,7 +649,6 @@ export function SubSubCategoryManagement() {
                   </TableCell>
                 </TableRow>
               ))}
-
               {filteredCategories.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center font-semibold text-gray-800">
@@ -610,9 +656,115 @@ export function SubSubCategoryManagement() {
                   </TableCell>
                 </TableRow>
               )}
-              
             </TableBody>
           </Table>
+
+          {/* Pagination Controls */}
+           {filteredCategories.length > itemsPerPage && (
+  <div className="flex items-center justify-between mt-4">
+    <div className="text-sm text-gray-500">
+      Showing {indexOfFirstItem + 1} to{" "}
+      {Math.min(indexOfLastItem, filteredCategories.length)} of{" "}
+      {filteredCategories.length} sub-categories
+    </div>
+    <div className="flex space-x-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToPreviousPage}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      
+      {/* Pagination with dynamic page buttons */}
+      {totalPages <= 4 ? (
+        // Show all pages if total pages is 4 or less
+        Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
+          <Button
+            key={number}
+            variant={currentPage === number ? "default" : "outline"}
+            size="sm"
+            onClick={() => paginate(number)}
+          >
+            {number}
+          </Button>
+        ))
+      ) : (
+        <>
+          {/* Always show first page */}
+          <Button
+            variant={currentPage === 1 ? "default" : "outline"}
+            size="sm"
+            onClick={() => paginate(1)}
+          >
+            1
+          </Button>
+          
+          {/* Show ellipsis after page 1 if current page is beyond 3 */}
+          {currentPage > 3 && <span className="px-2">...</span>}
+          
+          {/* Show page numbers with special handling for page 3 */}
+          {Array.from({ length: Math.min(3, totalPages - 2) }, (_, i) => {
+            let page;
+            
+            // When on page 3, show pages 2, 3, and 5
+            if (currentPage === 3) {
+              page = i === 0 ? 2 : i === 1 ? 3 : 5;
+            } 
+            // Normal behavior for other cases
+            else if (currentPage === 1) {
+              page = 2 + i;
+            } else if (currentPage === totalPages) {
+              page = totalPages - 2 + i;
+            } else {
+              page = currentPage - 1 + i;
+            }
+            
+            // Ensure page is within valid range and not page 4 when current page is 3
+            if (page > 1 && page <= totalPages && 
+                !(currentPage === 3 && page === 4)) {
+              return (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => paginate(page)}
+                >
+                  {page}
+                </Button>
+              );
+            }
+            return null;
+          })}
+          
+          {/* Show ellipsis before last page if needed */}
+          {currentPage < totalPages - 2 && <span className="px-2">...</span>}
+          
+          {/* Always show last page if not already shown */}
+          {totalPages > 1 && currentPage !== totalPages - 2 && (
+            <Button
+              variant={currentPage === totalPages ? "default" : "outline"}
+              size="sm"
+              onClick={() => paginate(totalPages)}
+            >
+              {totalPages}
+            </Button>
+          )}
+        </>
+      )}
+      
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={goToNextPage}
+        disabled={currentPage === totalPages}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  </div>
+)}
         </CardContent>
       </Card>
 
@@ -638,7 +790,16 @@ export function SubSubCategoryManagement() {
                 required
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a main category" />
+                  <SelectValue
+                    placeholder={
+                      formData.mainCategoryId
+                        ? mainCategories.find(
+                            (cat) =>
+                              cat.id.toString() === formData.mainCategoryId
+                          )?.name
+                        : "Select a main category"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {mainCategories.map((category) => (
@@ -666,7 +827,16 @@ export function SubSubCategoryManagement() {
                 disabled={!formData.mainCategoryId}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a sub-category" />
+                  <SelectValue
+                    placeholder={
+                      formData.subCategoryId
+                        ? availableSubCategories.find(
+                            (subCat) =>
+                              subCat.id.toString() === formData.subCategoryId
+                          )?.name
+                        : "Select a sub-category"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {availableSubCategories.map((subCategory) => (
@@ -697,7 +867,7 @@ export function SubSubCategoryManagement() {
                 id="editDescription"
                 name="description"
                 placeholder="Enter description"
-                value={formData.description}
+                value={formData?.description}
                 onChange={handleInputChange}
               />
             </div>

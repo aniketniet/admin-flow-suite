@@ -88,7 +88,7 @@ export function ProductManagement() {
     } else if (isVendor) {
       navigate(`/vendor/productdetails/${productId}`);
     }
-  }
+  };
 
   console.log("Role:", role);
 
@@ -168,7 +168,7 @@ export function ProductManagement() {
       const data = await response.json();
 
       if (!response.ok || data.status === false) {
-        const errorMsg =  data?.message || "Failed to delete product";
+        const errorMsg = data?.message || "Failed to delete product";
         toast({
           title: "Delete Failed",
           description: errorMsg,
@@ -202,9 +202,7 @@ export function ProductManagement() {
 
   const getStatusText = (stock: number) => {
     return (
-      <span className="text-xs">
-        {stock > 0 ? "In Stock" : "Out of Stock"}
-      </span>
+      <span className="text-xs">{stock > 0 ? "In Stock" : "Out of Stock"}</span>
     );
   };
 
@@ -252,7 +250,6 @@ export function ProductManagement() {
   // if (error) {
   //   return <div>Error: {error}</div>;
   // }
-
 
   return (
     <div className="space-y-6">
@@ -406,12 +403,15 @@ export function ProductManagement() {
                   <TableCell>{product.subCategory.name}</TableCell>
                   <TableCell>{product.vendor.name}</TableCell>
                   <TableCell>{product.variants[0]?.stock || 0}</TableCell>
-                  <TableCell>₹{product.variants[0]?.sellingprice || "0.00"}</TableCell>
+                  <TableCell>
+                    ₹{product.variants[0]?.sellingprice || "0.00"}
+                  </TableCell>
                   <TableCell>
                     <Badge
-                      className={getStatusColor(
-                        product.variants[0]?.stock || 0
-                      ) + " pointer-events-none"}
+                      className={
+                        getStatusColor(product.variants[0]?.stock || 0) +
+                        " pointer-events-none"
+                      }
                     >
                       {getStatusText(product.variants[0]?.stock || 0)}
                     </Badge>
@@ -484,8 +484,32 @@ export function ProductManagement() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (number) => (
+                {(() => {
+                  const pageNumbers = [];
+                  if (totalPages <= 4) {
+                    for (let i = 1; i <= totalPages; i++) {
+                      pageNumbers.push(i);
+                    }
+                  } else {
+                    if (currentPage <= 3) {
+                      pageNumbers.push(1, 2, 3, 4);
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumbers.push(
+                        totalPages - 3,
+                        totalPages - 2,
+                        totalPages - 1,
+                        totalPages
+                      );
+                    } else {
+                      pageNumbers.push(
+                        currentPage - 1,
+                        currentPage,
+                        currentPage + 1,
+                        currentPage + 2
+                      );
+                    }
+                  }
+                  return pageNumbers.map((number) => (
                     <Button
                       key={number}
                       variant={currentPage === number ? "default" : "outline"}
@@ -494,8 +518,8 @@ export function ProductManagement() {
                     >
                       {number}
                     </Button>
-                  )
-                )}
+                  ));
+                })()}
                 <Button
                   variant="outline"
                   size="sm"

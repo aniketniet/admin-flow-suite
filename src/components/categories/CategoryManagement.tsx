@@ -54,7 +54,7 @@ import Cookies from "js-cookie";
 
 export function CategoryManagement() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -62,6 +62,7 @@ export function CategoryManagement() {
   const [error, setError] = useState<string | null>(null);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [editFormData, setEditFormData] = useState({
+    
     name: "",
     description: "",
     image: null as File | null,

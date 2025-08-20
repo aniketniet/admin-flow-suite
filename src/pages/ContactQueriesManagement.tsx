@@ -24,7 +24,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, MoreHorizontal, Eye, Trash2 } from "lucide-react";
+import { 
+  Search, 
+  MoreHorizontal, 
+  Eye, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronsLeft, 
+  ChevronsRight 
+} from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import axios from "axios";
@@ -39,7 +48,11 @@ export function ContactQueriesManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { toast } = useToast();
-    const token = Cookies.get("admin_token");
+  const token = Cookies.get("admin_token");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchQueries = async () => {
@@ -82,42 +95,80 @@ export function ContactQueriesManagement() {
     );
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredQueries.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentQueries = filteredQueries.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   const handleViewMessage = (query) => {
     setSelectedQuery(query);
     setIsDialogOpen(true);
   };
 
-//   const handleDeleteQuery = async (queryId) => {
-//     try {
-//       const response = await axios.delete(
-//         `http://localhost:3000/api/admin/delete-contact-us-query/${queryId}`,
-//         {
-//           headers: {
-//             Authorization: `Bearer ${localStorage.getItem("token")}`,
-//           },
-//         }
-//       );
-
-//       if (response.data.success) {
-//         setQueries(queries.filter((q) => q.id !== queryId));
-//         toast({
-//           title: "Success",
-//           description: "Query deleted successfully",
-//         });
-//       } else {
-//         throw new Error(response.data.message || "Failed to delete query");
-//       }
-//     } catch (err) {
-//       toast({
-//         variant: "destructive",
-//         title: "Error",
-//         description: err.message,
-//       });
-//     }
-//   };
-
   const formatDate = (dateString) => {
     return format(new Date(dateString), "MMM dd, yyyy hh:mm a");
+  };
+
+  // Generate page numbers for display
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Always show first page
+      pages.push(1);
+      
+      // Calculate start and end of visible page range
+      let startPage = Math.max(2, currentPage - 1);
+      let endPage = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if we're near the beginning
+      if (currentPage <= 3) {
+        endPage = 4;
+      }
+      
+      // Adjust if we're near the end
+      if (currentPage >= totalPages - 2) {
+        startPage = totalPages - 3;
+      }
+      
+      // Add ellipsis if needed
+      if (startPage > 2) {
+        pages.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = startPage; i <= endPage; i++) {
+        pages.push(i);
+      }
+      
+      // Add ellipsis if needed
+      if (endPage < totalPages - 1) {
+        pages.push('...');
+      }
+      
+      // Always show last page
+      pages.push(totalPages);
+    }
+    
+    return pages;
   };
 
   if (loading) {
@@ -141,6 +192,22 @@ export function ContactQueriesManagement() {
             className="w-full pl-10"
           />
         </div>
+        
+        {/* Items per page selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(e.target.value)}
+            className="border rounded-md p-1 text-sm"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          <span className="text-sm text-gray-600">entries</span>
+        </div>
       </div>
 
       {/* Queries Table */}
@@ -163,9 +230,9 @@ export function ContactQueriesManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQueries.map((query) => (
+                {currentQueries.map((query, index) => (
                   <TableRow key={query.id} className="hover:bg-gray-50">
-                    <TableCell>{filteredQueries.indexOf(query) + 1}</TableCell>
+                    <TableCell>{(currentPage - 1) * itemsPerPage + index + 1}</TableCell>
                     <TableCell className="font-medium">{query.name}</TableCell>
                     <TableCell>{query.email}</TableCell>
                     <TableCell>{query.phone}</TableCell>
@@ -187,19 +254,12 @@ export function ContactQueriesManagement() {
                             <Eye className="mr-2 h-4 w-4" />
                             View Message
                           </DropdownMenuItem>
-                          {/* <DropdownMenuItem
-                            className="text-red-600"
-                            onClick={() => handleDeleteQuery(query.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem> */}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
-                {filteredQueries.length === 0 && (
+                {currentQueries.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center font-semibold text-gray-500">
                       No queries found.
@@ -210,6 +270,63 @@ export function ContactQueriesManagement() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination Controls */}
+          {filteredQueries.length > 0 && (
+            <div className="flex items-center justify-between mt-4 p-4 border-t">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQueries.length)} of {filteredQueries.length} entries
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page numbers */}
+                {getPageNumbers().map((page, index) => (
+                  <Button
+                    key={index}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => typeof page === 'number' && handlePageChange(page)}
+                    disabled={page === '...'}
+                  >
+                    {page}
+                  </Button>
+                ))}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

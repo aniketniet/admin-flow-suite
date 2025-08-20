@@ -182,7 +182,25 @@ const [errors, setErrors] = useState({
     setSelectedStatus(currentStatus);
   };
 
-  const statusOptions = ["ORDERED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  enum OrderItemStatus {
+    ORDERED = "ORDERED", // customer placed the order
+    PROCESSING = "PROCESSING", // order is being prepared
+    DISPATCHED = "DISPATCHED", // picked up / handed to courier
+    IN_TRANSIT = "IN_TRANSIT", // moving through the courier network
+    OUT_FOR_DELIVERY = "OUT_FOR_DELIVERY", // courier on the doorstep
+    DELIVERED = "DELIVERED", // successfully delivered
+    CANCELLED = "CANCELLED", // cancelled or returned
+  }
+
+  const statusOptions = [
+    OrderItemStatus.ORDERED,
+    OrderItemStatus.PROCESSING,
+    OrderItemStatus.DISPATCHED,
+    OrderItemStatus.IN_TRANSIT,
+    OrderItemStatus.OUT_FOR_DELIVERY,
+    OrderItemStatus.DELIVERED,
+    OrderItemStatus.CANCELLED,
+  ];
 
   if (loading) {
     return (

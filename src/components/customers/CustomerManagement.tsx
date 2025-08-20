@@ -18,13 +18,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, Filter, MoreHorizontal, Eye, Mail } from "lucide-react";
+import { Search, Filter, MoreHorizontal, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import Cookies from "js-cookie";
 
 export function CustomerManagement() {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
   const token = Cookies.get("admin_token");
 
   useEffect(() => {
@@ -56,12 +58,32 @@ export function CustomerManagement() {
     return matchesSearch && matchesStatus;
   });
 
+  // Get current users
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleDateString("en-IN", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
 
   return (
     <div className="space-y-6 p-4">
@@ -73,7 +95,10 @@ export function CustomerManagement() {
             <Input
               placeholder="Search customers..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
               className="w-full sm:w-64 pl-10"
             />
           </div>
@@ -85,22 +110,27 @@ export function CustomerManagement() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+              <DropdownMenuItem onClick={() => {
+                setStatusFilter("all");
+                setCurrentPage(1); // Reset to first page when changing filter
+              }}>
                 All
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("user")}>
+              <DropdownMenuItem onClick={() => {
+                setStatusFilter("user");
+                setCurrentPage(1);
+              }}>
                 User
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("admin")}>
+              <DropdownMenuItem onClick={() => {
+                setStatusFilter("admin");
+                setCurrentPage(1);
+              }}>
                 Admin
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* <div className="flex space-x-2">
-          <Button variant="outline">Export</Button>
-          <Button variant="outline">Send Email</Button>
-        </div> */}
       </div>
 
       {/* Table */}
@@ -121,9 +151,9 @@ export function CustomerManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+              {currentUsers.map((user, index) => (
                 <TableRow key={user.id} className="hover:bg-gray-50">
-                  <TableCell>{filteredUsers.indexOf(user) + 1}</TableCell>
+                  <TableCell>{indexOfFirstUser + index + 1}</TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium">{user.name}</div>
@@ -159,10 +189,6 @@ export function CustomerManagement() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Profile
                         </DropdownMenuItem>
-                        {/* <DropdownMenuItem>
-                          <Mail className="mr-2 h-4 w-4" />
-                          Send Email
-                        </DropdownMenuItem> */}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -171,7 +197,7 @@ export function CustomerManagement() {
               {filteredUsers.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="text-center text-sm text-gray-500"
                   >
                     No customers found.
@@ -180,6 +206,51 @@ export function CustomerManagement() {
               )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+            {filteredUsers.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+              Showing {indexOfFirstUser + 1} to {Math.min(indexOfLastUser, filteredUsers.length)} of {filteredUsers.length} customers
+              </div>
+              <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {(() => {
+                // Calculate page numbers to show (max 4)
+                let start = Math.max(1, currentPage - 1);
+                let end = Math.min(totalPages, start + 3);
+                if (end - start < 3) {
+                start = Math.max(1, end - 3);
+                }
+                return Array.from({ length: end - start + 1 }, (_, i) => start + i).map((number) => (
+                <Button
+                  key={number}
+                  variant={currentPage === number ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => paginate(number)}
+                >
+                  {number}
+                </Button>
+                ));
+              })()}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              </div>
+            </div>
+            )}
         </CardContent>
       </Card>
     </div>

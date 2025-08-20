@@ -37,7 +37,7 @@ const adminSidebarItems = [
   { id: "pendingvendors", label: "Pending Vendors", icon: Store, },
   { id: "categories", label: "Categories", icon: Grid2x2 },
   { id: "subcategories", label: "Sub Categories", icon: Grid2x2 },
-  { id: "sub-sub-categories", label: "Sub Sub Categories", icon: Grid2x2 },
+  { id: "subsubcategories", label: "Sub Sub Categories", icon: Grid2x2 },
   { id: "addproducts", label: "Add Products", icon: Package },
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingCart,  },

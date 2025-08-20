@@ -32,6 +32,8 @@ import {
   Edit,
   Trash2,
   Eye,
+  ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -94,6 +96,8 @@ export function SubCategoryManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Number of items per page
 
   const token = Cookies.get("admin_token");
 
@@ -142,6 +146,44 @@ export function SubCategoryManagement() {
 
     fetchData();
   }, [token]);
+
+  // Filter categories based on search term
+  const filteredCategories = subCategories.filter((category) => {
+    const matchesSearch =
+      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      category.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredCategories.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredCategories.length / itemsPerPage);
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Go to previous page
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Go to next page
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -254,6 +296,7 @@ export function SubCategoryManagement() {
   };
 
   const handleEditClick = (category: SubCategory) => {
+    // console.log(category, "handleEditClick");
     setFormData({
       id: category.id.toString(),
       mainCategoryId: category.mainCategoryId.toString(),
@@ -316,12 +359,12 @@ export function SubCategoryManagement() {
     }
   };
 
-  const filteredCategories = subCategories.filter((category) => {
-    const matchesSearch =
-      category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      category.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
+  // const filteredCategories = subCategories.filter((category) => {
+  //   const matchesSearch =
+  //     category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //     category.description?.toLowerCase().includes(searchTerm.toLowerCase());
+  //   return matchesSearch;
+  // });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -385,7 +428,6 @@ export function SubCategoryManagement() {
                 <div>
                   <Label htmlFor="mainCategoryId">Main Category</Label>
                   <Select
-                    
                     onValueChange={(value) =>
                       setFormData((prev) => ({
                         ...prev,
@@ -463,7 +505,10 @@ export function SubCategoryManagement() {
       {/* Categories Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Sub-Categories ({filteredCategories.length})</CardTitle>
+          <CardTitle>
+            Sub-Categories ({filteredCategories.length}) - Page {currentPage} of{" "}
+            {totalPages}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -471,7 +516,6 @@ export function SubCategoryManagement() {
               <TableRow>
                 <TableHead>#</TableHead>
                 <TableHead>Name</TableHead>
-                {/* <TableHead>Main Category ID</TableHead> */}
                 <TableHead>Description</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Image</TableHead>
@@ -480,17 +524,14 @@ export function SubCategoryManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCategories.map((category) => (
+              {currentItems.map((category, index) => (
                 <TableRow key={category.id} className="hover:bg-gray-50">
-                  <TableCell>
-                    {filteredCategories.indexOf(category) + 1}
-                  </TableCell>
+                  <TableCell>{indexOfFirstItem + index + 1}</TableCell>
                   <TableCell>
                     <div className="font-medium">{category.name}</div>
                   </TableCell>
-                  {/* <TableCell>{category.mainCategoryId}</TableCell> */}
                   <TableCell className="max-w-xs truncate">
-                    {category.description.slice(0, 20)}
+                    {category.description?.slice(0, 20) || "-"}
                   </TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
@@ -513,10 +554,6 @@ export function SubCategoryManagement() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        {/* <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </DropdownMenuItem> */}
                         <DropdownMenuItem
                           onClick={() => handleEditClick(category)}
                         >
@@ -537,7 +574,10 @@ export function SubCategoryManagement() {
               ))}
               {filteredCategories.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center font-semibold text-gray-800">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center font-semibold text-gray-800"
+                  >
                     No sub-categories found.
                   </TableCell>
                 </TableRow>
@@ -545,6 +585,117 @@ export function SubCategoryManagement() {
             </TableBody>
           </Table>
         </CardContent>
+        {filteredCategories.length > itemsPerPage && (
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2  p-4">
+            <div className="text-sm text-gray-500 mb-2 md:mb-0">
+              Showing {indexOfFirstItem + 1} to{" "}
+              {Math.min(indexOfLastItem, filteredCategories.length)} of{" "}
+              {filteredCategories.length} sub-categories
+            </div>
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="px-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Generate page buttons based on current position */}
+              {(() => {
+                const pages = [];
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(
+                  totalPages,
+                  startPage + maxVisiblePages - 1
+                );
+
+                // Adjust if we're near the end
+                if (endPage - startPage + 1 < maxVisiblePages) {
+                  startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
+
+                // Always show first page
+                if (startPage > 1) {
+                  pages.push(
+                    <Button
+                      key={1}
+                      variant={currentPage === 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => paginate(1)}
+                      className="w-8 h-8"
+                    >
+                      1
+                    </Button>
+                  );
+
+                  if (startPage > 2) {
+                    pages.push(
+                      <span key="ellipsis1" className="px-1 flex items-center">
+                        ...
+                      </span>
+                    );
+                  }
+                }
+
+                // Generate visible page buttons
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <Button
+                      key={i}
+                      variant={currentPage === i ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => paginate(i)}
+                      className="w-8 h-8"
+                    >
+                      {i}
+                    </Button>
+                  );
+                }
+
+                // Add ellipsis and last page if needed
+                if (endPage < totalPages) {
+                  if (endPage < totalPages - 1) {
+                    pages.push(
+                      <span key="ellipsis2" className="px-1 flex items-center">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  pages.push(
+                    <Button
+                      key={totalPages}
+                      variant={
+                        currentPage === totalPages ? "default" : "outline"
+                      }
+                      size="sm"
+                      onClick={() => paginate(totalPages)}
+                      className="w-8 h-8"
+                    >
+                      {totalPages}
+                    </Button>
+                  );
+                }
+
+                return pages;
+              })()}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="px-2"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Edit Dialog */}

@@ -29,6 +29,10 @@ import {
   Truck,
   CheckCircle,
   Download,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { TrendingUp, ShoppingCart, Users, DollarSign } from "lucide-react";
@@ -101,6 +105,10 @@ export function OrderManagement() {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = Cookies.get("user_role");
   const isAdmin = role === "admin";
@@ -197,8 +205,6 @@ export function OrderManagement() {
     }
   };
 
-
-
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toString().includes(searchTerm) ||
@@ -218,6 +224,23 @@ export function OrderManagement() {
 
     return matchesSearch && matchesStatus && matchesPayment;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentOrders = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(Number(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   const totalRevenue = orders.reduce(
     (sum, order) => sum + parseFloat(order.totalAmount),
@@ -335,6 +358,22 @@ export function OrderManagement() {
         </DropdownMenu>
           </div>
         </div>
+        
+        {/* Items per page selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">Show</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => handleItemsPerPageChange(e.target.value)}
+            className="border rounded-md p-1 text-sm"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+          <span className="text-sm text-gray-600">entries</span>
+        </div>
       </div>
 
       {/* Orders Table */}
@@ -357,7 +396,7 @@ export function OrderManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredOrders.map((order) => {
+              {currentOrders.map((order) => {
                 const totalItems = order.orderItems.reduce(
                   (sum, item) => sum + item.quantity,
                   0
@@ -388,23 +427,6 @@ export function OrderManagement() {
                     <TableCell>{orderDate}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end space-x-2">
-                      
-                          {/* <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => createShipRocketOrder(order.id)}
-                            disabled={shipmentLoading[order.id]}
-                          >
-                            {shipmentLoading[order.id] ? (
-                              "Processing..."
-                            ) : (
-                              <>
-                                <Truck className="h-4 w-4 mr-2" />
-                                Ship Now
-                              </>
-                            )}
-                          </Button> */}
-                     
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -418,18 +440,6 @@ export function OrderManagement() {
                               <Eye className="mr-2 h-4 w-4" />
                               Order Details
                             </DropdownMenuItem>
-                          
-                              {/* <DropdownMenuItem
-                                onClick={() => {
-                                  // This would be replaced with actual label URL if available
-                                  const labelUrl = `https://example.com/labels/${order.id}.pdf`;
-                                  window.open(labelUrl, "_blank");
-                                }}
-                              >
-                                <Download className="mr-2 h-4 w-4" />
-                                Download Label
-                              </DropdownMenuItem> */}
-                          
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -437,7 +447,7 @@ export function OrderManagement() {
                   </TableRow>
                 );
               })}
-              {filteredOrders.length === 0 && (
+              {currentOrders.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={8}
@@ -449,6 +459,75 @@ export function OrderManagement() {
               )}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {filteredOrders.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredOrders.length)} of {filteredOrders.length} entries
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -456,4 +535,3 @@ export function OrderManagement() {
     </>
   );
 }
-

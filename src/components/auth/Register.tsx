@@ -406,26 +406,26 @@ const GstDetailsStep = ({
   isLoading,
   setError,
 }) => {
+  const [hasGst, setHasGst] = useState(null);
+
   const handleSubmit = () => {
-    if (!formData.gstinNumber && !formData.eidNumber) {
-      setError("Please enter GSTIN number");
+    if (hasGst === null) {
+      setError("Please select whether you have a GST number");
       return;
     }
-    
-  if (!formData.gstinNumber && !formData.eidNumber) {
-    setError("Please enter GSTIN number");
-    toast.error("Please enter GSTIN number");
-    return;
-  }
 
-  if (formData.gstinNumber && formData.gstinNumber.length !== 15) {
-    setError("Please enter a valid 15-digit GSTIN number");
-    toast.error("Please enter a valid 15-digit GSTIN number");
-    return;
-  }
+    if (hasGst && (!formData.gstinNumber || formData.gstinNumber.length !== 15)) {
+      setError("Please enter a valid 15-digit GSTIN number");
+      return;
+    }
 
-  onNext();
-}
+    if (!hasGst && !formData.eidNumber) {
+      setError("Please enter your Enrolment ID/UIN");
+      return;
+    }
+
+    onNext();
+  };
 
   return (
     <div className="space-y-6">
@@ -434,49 +434,123 @@ const GstDetailsStep = ({
         <p className="text-gray-600">Enter your GST information</p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          GSTIN Number
-        </label>
-        <input
-          type="text"
-          value={formData.gstinNumber}
-          onChange={(e) => updateFormData("gstinNumber", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-          placeholder="Enter GSTIN number"
-        />
-        <p className="text-sm text-gray-500 mt-1">
-          15-digit GST identification number
-        </p>
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          EID Number (optional)
-        </label>
-        <input
-          type="text"
-          value={formData.eidNumber || ""}
-          onChange={(e) => updateFormData("eidNumber", e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-          placeholder="Enter EID number (if available)"
-        />
-        <p className="text-sm text-gray-500 mt-1">Enrolment ID (optional)</p>
+      <div className="mb-6">
+        <h3 className="text-lg font-medium text-gray-800 mb-3">Do you have a GST number?</h3>
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setHasGst(true)}
+            className={`flex-1 py-3 px-4 rounded-md border ${hasGst === true ? 'border-[#FF710B] bg-[#FF710B]/10' : 'border-gray-300'}`}
+          >
+            <span className="font-medium">Yes</span>
+            <p className="text-sm text-gray-500 mt-1">Enter your GSTIN and sell anywhere easily</p>
+          </button>
+          <button
+            onClick={() => setHasGst(false)}
+            className={`flex-1 py-3 px-4 rounded-md border ${hasGst === false ? 'border-[#FF710B] bg-[#FF710B]/10' : 'border-gray-300'}`}
+          >
+            <span className="font-medium">No</span>
+            <p className="text-sm text-gray-500 mt-1">Worry not, you can sell without GST</p>
+          </button>
+        </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Your GST number should be active and valid.
-          This will be used for tax compliance.
-        </p>
-      </div>
+      {hasGst === true && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            GSTIN Number
+          </label>
+          <input
+            type="text"
+            value={formData.gstinNumber}
+            onChange={(e) => updateFormData("gstinNumber", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
+            placeholder="Enter 15-digit GSTIN number"
+            maxLength={15}
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            15-digit GST identification number
+          </p>
+          {/* <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Regular GST & Composite GST sellers can register using their GSTIN number.
+              Our partner Vakilsearch can assist in obtaining a GSTIN.{" "}
+              <a href="https://www.vakilsearch.com/gst-registration" target="_blank" rel="noopener noreferrer" className="text-[#FF710B] underline">
+                Click here to learn more
+              </a>.
+            </p>
+          </div> */}
+        </div>
+      )}
+
+      {hasGst === false && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-medium text-gray-800 mb-2">Get EID in minutes & sell in your registered state</h3>
+            
+            <div className="mb-4">
+              <h4 className="font-medium mb-1">1. Apply for Enrolment ID</h4>
+              <p className="text-sm text-gray-600 mb-2">from the GST website (only PAN required)</p>
+              <a 
+                href="https://www.youtube.com/watch?v=ntchODi3zQE" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#FF710B] text-sm flex items-center"
+              >
+                <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a2.997 2.997 0 0 0-2.115-2.115C19.215 3.5 12 3.5 12 3.5s-7.215 0-9.383.571A2.997 2.997 0 0 0 .502 6.186C0 8.354 0 12 0 12s0 3.646.502 5.814a2.997 2.997 0 0 0 2.115 2.115C4.785 20.5 12 20.5 12 20.5s7.215 0 9.383-.571a2.997 2.997 0 0 0 2.115-2.115C24 15.646 24 12 24 12s0-3.646-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                Watch this video to learn more
+              </a>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-1">2. Enter Enrolment ID here to complete account setup</h4>
+              <p className="text-sm text-gray-600 mb-2">Once your ID is created, copy and paste it here to complete your setup</p>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={formData.eidNumber || ""}
+                  onChange={(e) => updateFormData("eidNumber", e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
+                  placeholder="Enter Enrolment ID / UIN"
+                />
+               
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h4 className="font-medium text-yellow-800 mb-2">Important tips to create Enrolment ID</h4>
+            <p className="text-sm text-yellow-700">
+              1. Return to the Shopinger page and paste the EID to verify
+            </p>
+            <a 
+              href="https://reg.gst.gov.in/registration/generateuid" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[#FF710B] text-sm mt-2 inline-block underline"
+            >
+              Click here to obtain Enrolment ID/UIN
+            </a>
+          </div>
+
+          {/* <div className="mt-4 text-center text-sm text-gray-500">
+            <p>Need more assistance? Call us on 080 - 61799601</p>
+          </div> */}
+        </div>
+      )}
 
       <button
         onClick={handleSubmit}
-        disabled={isLoading}
-        className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
+        disabled={isLoading || (hasGst === true && !formData.gstinNumber) || (hasGst === false && !formData.eidNumber)}
+        className="w-full bg-[#FF710B] text-white py-3 px-4 rounded-md hover:bg-[#e65f00] disabled:opacity-50 font-medium mt-6"
       >
         Continue
       </button>
+
+      {/* <div className="text-center text-sm text-gray-500 mt-4">
+        <p>Starting October 1st, 2023, sellers (with or without GST registration) can sell on Meesho.</p>
+      </div> */}
     </div>
   );
 };
@@ -596,10 +670,10 @@ const PickupAddressStep = ({
       setError("Please enter a valid 6-digit PIN code");
       return;
     }
-    if (!formData.gstinNumber) {
-      setError("Please fill in your GSTIN number");
-      return;
-    }
+    // if (!formData.gstinNumber || !formData.eidNumber) {
+    //   setError("Please fill in your GSTIN and EID numbers");
+    //   return;
+    // }
     if (!formData.plot_no) {
       setError("Please fill in your plot number");
       return;
@@ -619,10 +693,10 @@ const PickupAddressStep = ({
       return;
     }
 
-    if (formData.gstinNumber.length !== 15) {
-      setError("Please enter a valid 15-digit GSTIN number");
-      return;
-    }
+    // if (formData.gstinNumber.length !== 15) {
+    //   setError("Please enter a valid 15-digit GSTIN number");
+    //   return;
+    // }
 
     if (formData.plot_no.length === 0) {
       setError("Please fill in your plot number");
@@ -951,10 +1025,10 @@ const SupplierDetailsStep = ({
       return;
     }
 
-    if (!formData.gstinNumber) {
-      setError("Please fill in your GSTIN number");
-      return;
-    }
+    // if (!formData.gstinNumber || !formData.eidNumber) {
+    //   setError("Please fill in your GSTIN and EID numbers");
+    //   return;
+    // }
 
     if (!formData.plot_no) {
       setError("Please fill in your plot number");
