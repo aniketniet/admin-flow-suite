@@ -55,6 +55,14 @@ const [errors, setErrors] = useState({
   // Add others if you want to validate them too
 });
 
+  // Return request decision modal state
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState<boolean>(false);
+  const [returnRequestId, setReturnRequestId] = useState<number | null>(null);
+  const [returnAction, setReturnAction] = useState<"APPROVE" | "REJECT" | "">("");
+  const [returnNote, setReturnNote] = useState<string>("");
+  const [returnLoading, setReturnLoading] = useState<boolean>(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchOrderDetails = async () => {
       try {
@@ -253,8 +261,81 @@ const [errors, setErrors] = useState({
         return "bg-red-100 text-red-800";
       case "RETURNED":
         return "bg-orange-100 text-orange-800";
+      case "PENDING":
+        return "bg-yellow-100 text-yellow-800";
+      case "APPROVED":
+        return "bg-green-100 text-green-800";
+      case "REJECTED":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const openReturnModal = (rqId: number, action: "APPROVE" | "REJECT") => {
+    setReturnRequestId(rqId);
+    setReturnAction(action);
+    setReturnNote("");
+    setReturnError(null);
+    setIsReturnModalOpen(true);
+  };
+
+  const submitReturnDecision = async () => {
+    if (!isVendor) return; // safety: vendor-only endpoint
+    if (!returnRequestId || !returnAction) return;
+    try {
+      setReturnLoading(true);
+      setReturnError(null);
+
+      const url = `${import.meta.env.VITE_BASE_UR}vendor/return-requests/decide`;
+      await axios.post(
+        url,
+        new URLSearchParams({
+          returnRequestId: String(returnRequestId),
+          action: returnAction,
+          note: returnNote || "",
+        }),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      );
+
+      // Optimistically update local state
+      setOrder((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          orderItems: prev.orderItems?.map((oi) => ({
+            ...oi,
+            returnRequests: oi.returnRequests?.map((rr) =>
+              rr.id === returnRequestId
+                ? {
+                    ...rr,
+                    status: returnAction === "APPROVE" ? "APPROVED" : "REJECTED",
+                    vendorNote: returnNote,
+                  }
+                : rr
+            ),
+          })),
+        };
+      });
+
+      toast.success(`Return request ${returnAction === "APPROVE" ? "approved" : "rejected"}`);
+      setIsReturnModalOpen(false);
+      setReturnRequestId(null);
+      setReturnAction("");
+      setReturnNote("");
+    } catch (err: unknown) {
+      const msg = axios.isAxiosError(err)
+        ? err.response?.data?.message || err.message
+        : (err as Error).message || "Failed to update";
+      setReturnError(msg);
+      toast.error(msg);
+    } finally {
+      setReturnLoading(false);
     }
   };
 
@@ -582,6 +663,53 @@ const [errors, setErrors] = useState({
                         Update Status
                       </button>
                     </div>
+
+                    {/* Return Requests Section */}
+                    {item.returnRequests && item.returnRequests.length > 0 && (
+                      <div className="mt-6 border-t pt-4">
+                        <h5 className="text-sm font-semibold text-gray-800 mb-3">Return Requests</h5>
+                        <div className="space-y-3">
+                          {item.returnRequests.map((rr) => (
+                            <div key={rr.id} className="p-3 bg-gray-50 rounded border border-gray-200">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusColor(rr.status)}`}>
+                                      {rr.status}
+                                    </span>
+                                    <span className="text-[11px] text-gray-500">#{rr.id}</span>
+                                  </div>
+                                  <p className="text-sm text-gray-800"><span className="font-medium">Reason:</span> {rr.reason}</p>
+                                  {rr.vendorNote && (
+                                    <p className="text-xs text-gray-600 mt-1"><span className="font-medium">Vendor note:</span> {rr.vendorNote}</p>
+                                  )}
+                                  {rr.adminNote && (
+                                    <p className="text-xs text-gray-600"><span className="font-medium">Admin note:</span> {rr.adminNote}</p>
+                                  )}
+                                  <p className="text-[11px] text-gray-500 mt-1">Requested by {rr.user?.name || "User"} on {formatDate(rr.createdAt)}</p>
+                                </div>
+                                {isVendor && rr.status === "PENDING" && (
+                                  <div className="flex flex-col gap-2">
+                                    <button
+                                      className="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700"
+                                      onClick={() => openReturnModal(rr.id, "APPROVE")}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      className="px-2 py-1 text-xs rounded bg-red-600 text-white hover:bg-red-700"
+                                      onClick={() => openReturnModal(rr.id, "REJECT")}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -761,6 +889,59 @@ const [errors, setErrors] = useState({
                 className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Confirm & Ship
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return Decision Modal */}
+      {isReturnModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md">
+            <h3 className="text-lg font-medium mb-2">
+              {returnAction === "APPROVE" ? "Approve Return Request" : "Reject Return Request"}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Add an optional note for the customer/vendor records.
+            </p>
+
+            {returnError && (
+              <div className="mb-3 p-2 bg-red-100 text-red-700 rounded text-sm">{returnError}</div>
+            )}
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+            <textarea
+              className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 min-h-24"
+              placeholder="Write a note (optional)"
+              value={returnNote}
+              onChange={(e) => setReturnNote(e.target.value)}
+            />
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReturnModalOpen(false);
+                  setReturnRequestId(null);
+                  setReturnAction("");
+                  setReturnNote("");
+                  setReturnError(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                disabled={returnLoading}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitReturnDecision}
+                className={`px-4 py-2 rounded-md text-sm font-medium text-white ${
+                  returnAction === "APPROVE" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                }`}
+                disabled={returnLoading}
+              >
+                {returnLoading ? "Submitting..." : returnAction === "APPROVE" ? "Approve" : "Reject"}
               </button>
             </div>
           </div>
