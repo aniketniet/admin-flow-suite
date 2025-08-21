@@ -40,6 +40,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import Cookies from "js-cookie";
+import { Switch } from "../ui/switch";
 
 interface Product {
   id: number;
@@ -192,6 +193,51 @@ export function ProductManagement() {
       });
     }
   };
+
+   //active and inactive products
+
+   const handleToggleProductStatus = async (productId: number, isActive: boolean) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_UR}vendor/update-status/${productId}`,
+        {
+          method: "put",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+         
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok || data.status === false) {
+        const errorMsg = data?.message || "Failed to update product status";
+        toast({
+          title: "Update Failed",
+          description: errorMsg,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Product Status Updated",
+        description: `The product is now ${!isActive ? "inactive" : "active"}.`,
+      });
+
+      // Refresh the product list after successful status update
+      await fetchProducts();
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err?.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (stock: number) => {
     if (stock > 0) {
       return "bg-green-100 text-green-800";
@@ -376,6 +422,7 @@ export function ProductManagement() {
                 <TableHead>Stock</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Active/Inactive</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -416,6 +463,14 @@ export function ProductManagement() {
                       {getStatusText(product.variants[0]?.stock || 0)}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={product.is_active}
+                      onCheckedChange={(checked) =>
+                        handleToggleProductStatus(product.id, checked)
+                      }
+                    />
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -442,13 +497,15 @@ export function ProductManagement() {
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => handleDeleteProduct(product.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
+                        {isAdmin && (
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => handleDeleteProduct(product.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
