@@ -1076,7 +1076,7 @@ const SupplierDetailsStep = ({
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (data) {
         toast.success("Registration successful! Welcome to Shopinger!");
         // Redirect to dashboard or login page
         window.location.replace("https://shopinger.co.in/admin/login"); // Use replace to avoid back navigation

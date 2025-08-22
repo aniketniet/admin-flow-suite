@@ -35,18 +35,16 @@ const VendorProfile = () => {
 
     fetchUserData();
   }, [vendorId, token]);
-
   const updateVendorStatus = async () => {
     if (!userData) return;
 
     setUpdatingStatus(true);
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_BASE_UR}admin/update-vendor-status`,
-        new URLSearchParams({ id: vendorId }),
+        `${import.meta.env.VITE_BASE_UR}admin/active-inactive-vendor/${vendorId}`,
+        {},
         {
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
             Authorization: `Bearer ${token}`,
           },
         }

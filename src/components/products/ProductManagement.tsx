@@ -422,7 +422,7 @@ export function ProductManagement() {
                 <TableHead>Stock</TableHead>
                 <TableHead>Price</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Active/Inactive</TableHead>
+                {isVendor && <TableHead>Active/Inactive</TableHead>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -463,14 +463,16 @@ export function ProductManagement() {
                       {getStatusText(product.variants[0]?.stock || 0)}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={product.is_active}
-                      onCheckedChange={(checked) =>
-                        handleToggleProductStatus(product.id, checked)
-                      }
-                    />
-                  </TableCell>
+                  {isVendor && (
+                    <TableCell>
+                      <Switch
+                        checked={product.is_active}
+                        onCheckedChange={(checked) =>
+                          handleToggleProductStatus(product.id, checked)
+                        }
+                      />
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
