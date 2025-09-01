@@ -49,6 +49,7 @@ interface Category {
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
+  platform_fee?: string; // newly added optional platform fee (naming based on backend expectation)
 }
 import Cookies from "js-cookie";
 
@@ -70,6 +71,7 @@ export function CategoryManagement() {
     cgst: "",
     sgst: "",
     position: "",
+  platform_fee: "",
 
   });
   const [addFormData, setAddFormData] = useState({
@@ -80,6 +82,7 @@ export function CategoryManagement() {
     cgst: "",
     sgst: "",
     position: "",
+  platform_fee: "",
   });
   const [imagePreview, setImagePreview] = useState("");
   const [addImagePreview, setAddImagePreview] = useState("");
@@ -128,7 +131,7 @@ export function CategoryManagement() {
     };
 
     fetchCategories();
-  }, []);
+  }, [token]);
 
   const filteredCategories = categories.filter((category) => {
    
@@ -147,6 +150,7 @@ export function CategoryManagement() {
 
   const handleEditClick = (category: Category) => {
     setCurrentCategory(category);
+  const catWithFee = category as unknown as Category & { platform_fee?: string; plateform_fee?: string };
     setEditFormData({
       name: category.name,
       description: category.description,
@@ -155,7 +159,7 @@ export function CategoryManagement() {
       cgst: category.cgst || "",
       sgst: category.sgst || "",
       position: category.sortOrder || "",
-
+      platform_fee: catWithFee.platform_fee || catWithFee.plateform_fee || "",
     });
     if (category.imgUrl) {
       setImagePreview(`${import.meta.env.VITE_BASE_URL_IMG}${category.imgUrl}`);
@@ -225,6 +229,8 @@ export function CategoryManagement() {
       formData.append("cgst", editFormData.cgst);
       formData.append("sgst", editFormData.sgst);
       formData.append("sortOrder", editFormData.position);
+  // backend expects 'plateform_fee' (typo) and it's required
+  formData.append("plateform_fee", editFormData.platform_fee);
       if (editFormData.image) {
         formData.append("image", editFormData.image);
       }
@@ -262,10 +268,13 @@ export function CategoryManagement() {
   };
 
   const handleAddCategory = async () => {
-    if (!addFormData.name) {
-      toast.error("Category name is required");
-      return;
-    }
+    // Front-end validation matching backend required fields
+    if (!addFormData.name.trim()) return toast.error("Name is required");
+    if (!addFormData.description.trim()) return toast.error("Description is required");
+    if (!addFormData.cgst.trim()) return toast.error("CGST is required");
+    if (!addFormData.sgst.trim()) return toast.error("SGST is required");
+    if (!addFormData.position.trim()) return toast.error("Sort order is required");
+    if (!addFormData.platform_fee.trim()) return toast.error("Platform fee is required");
 
     try {
       const formData = new FormData();
@@ -275,6 +284,7 @@ export function CategoryManagement() {
       formData.append("cgst", addFormData.cgst);
       formData.append("sgst", addFormData.sgst);
       formData.append("sortOrder", addFormData.position);
+      formData.append("plateform_fee", addFormData.platform_fee);
       if (addFormData.image) {
         formData.append("image", addFormData.image);
       }
@@ -306,6 +316,7 @@ export function CategoryManagement() {
           sgst: "",
           position: "",
           image: null,
+          platform_fee: "",
         });
         setAddImagePreview("");
         toast.success("Category added successfully");
@@ -361,91 +372,81 @@ export function CategoryManagement() {
               <DialogHeader>
                 <DialogTitle>Add New Category</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4">
-                <div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex flex-col space-y-2">
                   <Label htmlFor="categoryName" >Category Name</Label>
                   <Input
                     id="categoryName"
                     name="name"
-                    className="mt-4 "
                     value={addFormData.name}
                     onChange={handleAddFormChange}
                     placeholder="Enter category name"
                   />
                 </div>
-                <div>
+                <div className="flex flex-col space-y-2 md:col-span-2">
                   <Label htmlFor="description">Description</Label>
                   <Input
                     id="description"
                     name="description"
-                    className="mt-4"
                     value={addFormData.description}
                     onChange={handleAddFormChange}
                     placeholder="Enter description"
                   />
                 </div>
-                <div className="flex space-x-4">
-                  <div>
-                    <Label htmlFor="cgst">CGST (%)</Label>
-                    <Input
-                      id="cgst"
-                      name="cgst"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="mt-4"
-                      required
-                      placeholder="Enter CGST"
-                      value={addFormData.cgst ?? ""}
-                      onChange={(e) =>
-                        setAddFormData({ ...addFormData, cgst: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="sgst">SGST (%)</Label>
-                    <Input
-                      id="sgst"
-                      name="sgst"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="mt-4"
-                      required
-                      placeholder="Enter SGST"
-                      value={addFormData.sgst ?? ""}
-                      onChange={(e) =>
-                        setAddFormData({ ...addFormData, sgst: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="igst">IGST (%) <span className="text-gray-400">(optional)</span></Label>
-                    <Input
-                      id="igst"
-                      name="igst"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className="mt-4"
-                      placeholder="Enter IGST"
-                      value={addFormData.igst ?? ""}
-                      onChange={(e) =>
-                        setAddFormData({ ...addFormData, igst: e.target.value })
-                      }
-                    />
-                  </div>
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="cgst">CGST (%)</Label>
+                  <Input
+                    id="cgst"
+                    name="cgst"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    placeholder="Enter CGST"
+                    value={addFormData.cgst ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({ ...addFormData, cgst: e.target.value })
+                    }
+                  />
                 </div>
-                {/* //position */}
-
-                <div>
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="sgst">SGST (%)</Label>
+                  <Input
+                    id="sgst"
+                    name="sgst"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    placeholder="Enter SGST"
+                    value={addFormData.sgst ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({ ...addFormData, sgst: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="igst">IGST (%) <span className="text-gray-400">(optional)</span></Label>
+                  <Input
+                    id="igst"
+                    name="igst"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter IGST"
+                    value={addFormData.igst ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({ ...addFormData, igst: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col space-y-2">
                   <Label htmlFor="position">Position</Label>
                   <Input
                     id="position"
                     name="position"
                     type="number"
                     min="0"
-                    className="mt-4"
                     placeholder="Enter position"
                     value={addFormData.position ?? ""}
                     onChange={(e) =>
@@ -453,18 +454,31 @@ export function CategoryManagement() {
                     }
                   />
                 </div>
-
-                <div>
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="platform_fee">Platform Fee</Label>
+                  <Input
+                    id="platform_fee"
+                    name="platform_fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter platform fee"
+                    value={addFormData.platform_fee ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({ ...addFormData, platform_fee: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col space-y-2 md:col-span-2">
                   <Label htmlFor="image">Category Image</Label>
                   <Input
                     id="image"
                     type="file"
                     accept="image/*"
-                    className="mt-4"
                     onChange={handleAddImageChange}
                   />
                   {addImagePreview && (
-                    <div className="mt-2">
+                    <div>
                       <img
                         src={addImagePreview}
                         alt="Preview"
@@ -473,7 +487,7 @@ export function CategoryManagement() {
                     </div>
                   )}
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="md:col-span-2 flex justify-end space-x-2">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -643,8 +657,8 @@ export function CategoryManagement() {
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col space-y-2">
               <Label htmlFor="edit-name">Category Name</Label>
               <Input
                 id="edit-name"
@@ -654,7 +668,7 @@ export function CategoryManagement() {
                 placeholder="Enter category name"
               />
             </div>
-            <div>
+            <div className="flex flex-col space-y-2 md:col-span-2">
               <Label htmlFor="edit-description">Description</Label>
               <Input
                 id="edit-description"
@@ -664,64 +678,60 @@ export function CategoryManagement() {
                 placeholder="Enter description"
               />
             </div>
-            <div className="flex space-x-4">
-              <div>
-                <Label htmlFor="edit-cgst">CGST (%)</Label>
-                <Input
-                  id="edit-cgst"
-                  name="cgst"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.cgst ?? ""}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, cgst: e.target.value })
-                  }
-                  placeholder="Enter CGST"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-sgst">SGST (%)</Label>
-                <Input
-                  id="edit-sgst"
-                  name="sgst"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.sgst ?? ""}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, sgst: e.target.value })
-                  }
-                  placeholder="Enter SGST"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-igst">
-                  IGST (%) <span className="text-gray-400">(optional)</span>
-                </Label>
-                <Input
-                  id="edit-igst"
-                  name="igst"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.igst ?? ""}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, igst: e.target.value })
-                  }
-                  placeholder="Enter IGST"
-                />
-              </div>
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="edit-cgst">CGST (%)</Label>
+              <Input
+                id="edit-cgst"
+                name="cgst"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editFormData.cgst ?? ""}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, cgst: e.target.value })
+                }
+                placeholder="Enter CGST"
+              />
             </div>
-            {/* position */}
-            <div>
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="edit-sgst">SGST (%)</Label>
+              <Input
+                id="edit-sgst"
+                name="sgst"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editFormData.sgst ?? ""}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, sgst: e.target.value })
+                }
+                placeholder="Enter SGST"
+              />
+            </div>
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="edit-igst">
+                IGST (%) <span className="text-gray-400">(optional)</span>
+              </Label>
+              <Input
+                id="edit-igst"
+                name="igst"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editFormData.igst ?? ""}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, igst: e.target.value })
+                }
+                placeholder="Enter IGST"
+              />
+            </div>
+            <div className="flex flex-col space-y-2">
               <Label htmlFor="edit-position">Position</Label>
               <Input
                 id="edit-position"
                 name="position"
                 type="number"
                 min="0"
-                className="mt-4"
                 placeholder="Enter position"
                 value={editFormData.position ?? ""}
                 onChange={(e) =>
@@ -729,9 +739,22 @@ export function CategoryManagement() {
                 }
               />
             </div>
-
-
-            <div>
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="edit-platform_fee">Platform Fee</Label>
+              <Input
+                id="edit-platform_fee"
+                name="platform_fee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editFormData.platform_fee ?? ""}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, platform_fee: e.target.value })
+                }
+                placeholder="Enter platform fee"
+              />
+            </div>
+            <div className="flex flex-col space-y-2 md:col-span-2">
               <Label htmlFor="edit-image">Category Image</Label>
               <Input
                 id="edit-image"
@@ -740,7 +763,7 @@ export function CategoryManagement() {
                 onChange={handleImageChange}
               />
               {imagePreview && (
-                <div className="mt-2">
+                <div>
                   <img
                     src={imagePreview}
                     alt="Preview"
@@ -749,7 +772,7 @@ export function CategoryManagement() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end space-x-2">
+            <div className="md:col-span-2 flex justify-end space-x-2">
               <Button
                 variant="outline"
                 onClick={() => setIsEditDialogOpen(false)}

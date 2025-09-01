@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Eye,
   EyeOff,
@@ -16,13 +16,32 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 
 // Step 1: Email, Phone & Password Component
+interface RegistrationFormData {
+  email: string;
+  phone: string;
+  password: string;
+  otp?: string;
+  gstinNumber?: string;
+  plot_no?: string;
+  building?: string;
+  street?: string;
+  area?: string;
+  country?: string;
+  pickupLocation?: string;
+  bankName?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  accountNumber?: string;
+  confirmAccountNumber?: string;
+  ifscCode?: string;
+  businessName?: string;
+  supplierName?: string;
+  eidNumber?: string;
+}
+
 type EmailPhoneStepProps = {
-  formData: {
-    email: string;
-    phone: string;
-    password: string;
-    [key: string]: any;
-  };
+  formData: RegistrationFormData;
   updateFormData: (field: string, value: string) => void;
   onNext: (tempToken?: string) => void;
   isLoading: boolean;
@@ -42,7 +61,7 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.email || !formData.phone || !formData.password) {
       setError("Please fill in all required fields");
       toast.error("Please fill in all required fields");
@@ -63,7 +82,6 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
     setError("");
 
     try {
-      // Call your registration API
       const response = await fetch(
         `${import.meta.env.VITE_BASE_UR}public/vendor-register-new`,
         {
@@ -79,50 +97,45 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
         }
       );
 
-      console.log("Registration response status:", response);
-
       const data = await response.json();
+      localStorage.setItem("tempToken", data.tempToken || "");
 
-      localStorage.setItem("tempToken", data.tempToken || ""); // Store tempToken for later use
-
-      console.log("Registration response:", data);
-      // localStorage.setItem("tempToken", data.tempToken); // Store tempToken for later use
-      // If Prisma error, show toast with formatted error
       if (
         data?.error &&
         typeof data.error === "string" &&
-        data.error.includes("prisma")
+        data.error.toLowerCase().includes("prisma")
       ) {
         setError("A user with this email already exists.");
-        toast.error(
-          <div>
-            <div className="font-semibold mb-1">Registration Error</div>
-            <div>
-              {data.error.includes("Admin_email_key") ? (
-                "A user with this email already exists."
-              ) : (
-                <pre className="whitespace-pre-wrap text-xs">{data.error}</pre>
-              )}
-            </div>
-          </div>
-        );
+        toast.error("A user with this email already exists.");
         setIsLoading(false);
         return;
       }
 
       if (response.ok) {
-        onNext(data.tempToken); // Pass tempToken to next step
+        onNext(data.tempToken);
       } else {
         setError(data.message || "Registration failed. Please try again.");
         toast.error(data.message || "Registration failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData.email, formData.phone, formData.password, onNext, setError, setIsLoading]);
+
+  // Submit on Enter key
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!isLoading) handleSubmit();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [formData.email, formData.phone, formData.password, isLoading, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -245,7 +258,7 @@ const OtpVerificationStep = ({
   setError,
   vendorId,
 }) => {
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     if (!formData.otp || formData.otp.length !== 4) {
       setError("Please enter a valid 4-digit OTP");
       toast.error("Please enter a valid 4-digit OTP");
@@ -321,7 +334,19 @@ const OtpVerificationStep = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData.otp, onNext, setError, setIsLoading]);
+
+  // Submit on Enter key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!isLoading) handleSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [formData.otp, isLoading, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -408,7 +433,7 @@ const GstDetailsStep = ({
 }) => {
   const [hasGst, setHasGst] = useState(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (hasGst === null) {
       setError("Please select whether you have a GST number");
       return;
@@ -425,7 +450,19 @@ const GstDetailsStep = ({
     }
 
     onNext();
-  };
+  }, [hasGst, formData.gstinNumber, formData.eidNumber, onNext, setError]);
+
+  // Enter key support
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [hasGst, formData.gstinNumber, formData.eidNumber, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -568,6 +605,41 @@ const PickupAddressStep = ({
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingStates, setLoadingStates] = useState(false);
 
+  const fetchStates = useCallback(async (countryName) => {
+    if (!countryName) {
+      setStates([]);
+      return;
+    }
+
+    setLoadingStates(true);
+    try {
+      const response = await fetch(
+        "https://countriesnow.space/api/v0.1/countries/states"
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch states");
+      }
+
+      const data = await response.json();
+
+      if (data.error === false) {
+        const country = data.data.find((c) => c.name === countryName);
+        if (country) {
+          setStates(country.states || []);
+        } else {
+          setStates([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching states:", error);
+      setError("Failed to load states. Please try again.");
+      setStates([]);
+    } finally {
+      setLoadingStates(false);
+    }
+  }, [setError]);
+
   useEffect(() => {
     const fetchCountries = async () => {
       setLoadingCountries(true);
@@ -617,42 +689,7 @@ const PickupAddressStep = ({
     };
 
     fetchCountries();
-  }, []);
-
-  const fetchStates = async (countryName) => {
-    if (!countryName) {
-      setStates([]);
-      return;
-    }
-
-    setLoadingStates(true);
-    try {
-      const response = await fetch(
-        "https://countriesnow.space/api/v0.1/countries/states"
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch states");
-      }
-
-      const data = await response.json();
-
-      if (data.error === false) {
-        const country = data.data.find((c) => c.name === countryName);
-        if (country) {
-          setStates(country.states || []);
-        } else {
-          setStates([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching states:", error);
-      setError("Failed to load states. Please try again.");
-      setStates([]);
-    } finally {
-      setLoadingStates(false);
-    }
-  };
+  }, [formData.country, setError, updateFormData, fetchStates]);
 
   const handleCountryChange = (countryName) => {
     updateFormData("country", countryName);
@@ -660,7 +697,7 @@ const PickupAddressStep = ({
     fetchStates(countryName);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
        if (!formData.pickupLocation) {
       setError("Please fill in your pickup location");
       return;
@@ -705,7 +742,19 @@ const PickupAddressStep = ({
     
 
     onNext();
-  };
+  }, [formData.pickupLocation, formData.pincode, formData.plot_no, formData.city, formData.state, formData.country, onNext, setError]);
+
+  // Enter key support
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [formData.pickupLocation, formData.plot_no, formData.city, formData.state, formData.pincode, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -902,7 +951,8 @@ const BankDetailsStep = ({
   isLoading,
   setError,
 }) => {
-  const handleSubmit = () => {
+
+  const handleSubmit = useCallback(() => {
     if (
       !formData.accountNumber ||
       !formData.confirmAccountNumber ||
@@ -916,7 +966,19 @@ const BankDetailsStep = ({
       return;
     }
     onNext();
-  };
+  }, [formData.accountNumber, formData.confirmAccountNumber, formData.ifscCode, onNext, setError]);
+
+  // Enter key support
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [formData.accountNumber, formData.confirmAccountNumber, formData.ifscCode, isLoading, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -1009,8 +1071,7 @@ const SupplierDetailsStep = ({
   setIsLoading,
   setError,
 }) => {
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(async () => {
     if (!formData.businessName || !formData.supplierName) {
       setError("Please fill in your business and supplier name");
       return;
@@ -1082,37 +1143,13 @@ const SupplierDetailsStep = ({
         window.location.replace("https://shopinger.co.in/admin/login"); // Use replace to avoid back navigation
       } else {
         // Try to parse error details if present
-        let errorMessages = [];
-        if (data.error) {
-          try {
-            const errorObj = JSON.parse(data.error);
-            for (const key in errorObj) {
-              if (Array.isArray(errorObj[key])) {
-                errorMessages = errorMessages.concat(errorObj[key]);
-              } else if (typeof errorObj[key] === "string") {
-                errorMessages.push(errorObj[key]);
-              }
-            }
-          } catch {
-            errorMessages.push(data.error);
-          }
-        }
-        const errorMsg =
-          errorMessages.length > 0
-            ? errorMessages.join(" ")
-            : data.message || "Registration failed. Please try again.";
-        setError(errorMsg);
+        // Show only the message from backend if present
+        setError(data.message || "Registration failed. Please try again.");
         toast.error(
           <div>
             <div className="font-semibold mb-1">Registration Error</div>
             <div>
-              {errorMessages.length > 0
-                ? errorMessages.map((msg, idx) => (
-                    <div key={idx} className="text-xs whitespace-pre-wrap">
-                      {msg}
-                    </div>
-                  ))
-                : errorMsg}
+              {data.message || "Registration failed. Please try again."}
             </div>
           </div>
         );
@@ -1123,7 +1160,19 @@ const SupplierDetailsStep = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [formData.businessName, formData.supplierName, formData.city, formData.state, formData.pincode, formData.plot_no, formData.building, formData.street, formData.area, formData.country, formData.pickupLocation, formData.gstinNumber, formData.eidNumber, formData.bankName, formData.accountNumber, formData.ifscCode, setError, setIsLoading]);
+
+  // Enter key support
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!isLoading) handleSubmit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [formData.businessName, formData.supplierName, formData.plot_no, formData.city, formData.state, formData.pincode, isLoading, handleSubmit]);
 
   return (
     <div className="space-y-6">
@@ -1331,7 +1380,7 @@ const ShopingerRegistration = () => {
 
     switch (currentStep) {
       case 1:
-        return <EmailPhoneStep {...commonProps} />;
+  return <EmailPhoneStep {...commonProps} error={error} />;
       case 2:
         return <OtpVerificationStep {...commonProps} vendorId={vendorId} />;
       case 3:

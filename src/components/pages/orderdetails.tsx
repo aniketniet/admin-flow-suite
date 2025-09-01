@@ -62,6 +62,20 @@ const [errors, setErrors] = useState({
   const [returnNote, setReturnNote] = useState<string>("");
   const [returnLoading, setReturnLoading] = useState<boolean>(false);
   const [returnError, setReturnError] = useState<string | null>(null);
+  // Prescription preview modal
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
+
+  const getFullFileUrl = (relativePath?: string) => {
+    if (!relativePath) return "";
+    if (relativePath.startsWith("http")) return relativePath;
+    return `${import.meta.env.VITE_BASE_URL_IMG}${relativePath}`;
+  };
+
+  interface OrderWithFile { file?: string }
+  const prescriptionFile = (order as unknown as OrderWithFile)?.file;
+  const prescriptionExt = prescriptionFile?.split('.').pop()?.toLowerCase();
+  const isPrescriptionImage = prescriptionExt && ["jpg","jpeg","png","gif","webp","svg"].includes(prescriptionExt);
+  const isPrescriptionPdf = prescriptionExt === "pdf";
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -664,6 +678,46 @@ const [errors, setErrors] = useState({
                       </button>
                     </div>
 
+                    {/* Prescription File (shown for every item if order-level file exists) */}
+                    {prescriptionFile && (
+                      <div className="mt-4 border-t pt-4">
+                        <h6 className="text-xs font-semibold text-gray-600 mb-2">Prescription</h6>
+                        {isPrescriptionImage && (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={getFullFileUrl(prescriptionFile)}
+                              alt="Prescription"
+                              className="h-20 w-20 object-cover rounded cursor-pointer border"
+                              onClick={() => setShowPrescriptionModal(true)}
+                              loading="lazy"
+                            />
+                            <button
+                              type="button"
+                              className="text-blue-600 text-xs underline"
+                              onClick={() => window.open(getFullFileUrl(prescriptionFile), '_blank')}
+                            >
+                              Open Full Image
+                            </button>
+                          </div>
+                        )}
+                        {isPrescriptionPdf && (
+                          <div className="flex items-center gap-3 text-sm">
+                            <span className="inline-block px-2 py-1 text-xs bg-red-100 text-red-600 rounded">PDF</span>
+                            <button
+                              type="button"
+                              className="text-blue-600 underline text-xs"
+                              onClick={() => window.open(getFullFileUrl(prescriptionFile), '_blank')}
+                            >
+                              View Prescription PDF
+                            </button>
+                          </div>
+                        )}
+                        {!isPrescriptionImage && !isPrescriptionPdf && (
+                          <p className="text-xs text-gray-500">Unsupported file type</p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Return Requests Section */}
                     {item.returnRequests && item.returnRequests.length > 0 && (
                       <div className="mt-6 border-t pt-4">
@@ -942,6 +996,25 @@ const [errors, setErrors] = useState({
                 disabled={returnLoading}
               >
                 {returnLoading ? "Submitting..." : returnAction === "APPROVE" ? "Approve" : "Reject"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showPrescriptionModal && isPrescriptionImage && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50" onClick={() => setShowPrescriptionModal(false)}>
+          <div className="max-w-3xl max-h-[90vh] p-4" onClick={(e)=>e.stopPropagation()}>
+            <img
+              src={getFullFileUrl(prescriptionFile)}
+              alt="Prescription Full"
+              className="max-h-[80vh] w-auto rounded shadow-lg mx-auto"
+            />
+            <div className="text-center mt-4">
+              <button
+                className="px-4 py-1 bg-white rounded shadow text-sm hover:bg-gray-100"
+                onClick={() => setShowPrescriptionModal(false)}
+              >
+                Close
               </button>
             </div>
           </div>

@@ -1,409 +1,253 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, ArrowLeft } from "lucide-react";
-import { toast, Toaster } from "sonner";
-
-// Replace these with your actual UI components or use plain HTML
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
+
 
 const LoginPage = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
-  const [userType, setUserType] = useState("vendor"); // 'admin' or 'vendor'
-  const [error, setError] = useState("");
   const navigate = useNavigate();
-
-  // Forgot password states
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // userType selection removed; backend response decides role
+  const [step, setStep] = useState<"PHONE" | "OTP">("PHONE");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: phone, 2: otp and new password
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [timer, setTimer] = useState(0); // seconds remaining to resend
+  const [detectedRole, setDetectedRole] = useState<string | null>(null);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
+  // countdown for resend
+  useEffect(() => {
+    if (timer <= 0) return;
+    const id = setInterval(() => setTimer((t) => t - 1), 1000);
+    return () => clearInterval(id);
+  }, [timer]);
 
-    try {
-      const formData = new URLSearchParams();
-      formData.append("email", email);
-      formData.append("password", password);
+  const baseUrl = import.meta.env.VITE_BASE_UR;
 
-      const endpoint = userType === "admin" 
-        ? `${import.meta.env.VITE_BASE_UR}public/admin-login`
-        : `${import.meta.env.VITE_BASE_UR}public/vendor-login`;
+  const isValidPhone = (p: string) => /^\d{10}$/.test(p);
+  const isValidOtp = (o: string) => /^\d{4,6}$/.test(o);
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: formData.toString(),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.token) {
-        // Save token and role in cookies
-        Cookies.set(`${userType}_token`, data.token, {
-          expires: rememberMe ? 7 : undefined,
-        });
-        Cookies.set("user_role", userType, {
-          expires: rememberMe ? 7 : undefined,
-        });
-
-        // Save user data in cookies if needed
-        const userData = data[userType];
-        if (userData) {
-          Cookies.set("user_data", JSON.stringify(userData), {
-            expires: rememberMe ? 7 : undefined,
-          });
-        }
-
-        // Redirect based on role
-        toast.success("Login successful!");
-        navigate(userType === "admin" ? "/dashboard" : "/vendor/dashboard");
-      } else {
-        setError(data?.message || "Invalid credentials.");
-        toast.error(data?.message || "Invalid credentials.");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong.");
-      toast.error("Something went wrong.");
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (userType !== "vendor") {
-      toast.error("Forgot password is only available for vendors");
+  const requestOtp = async () => {
+    if (!isValidPhone(phone)) {
+      toast.error("Enter valid 10 digit phone");
       return;
     }
-
-    if (forgotPasswordStep === 1) {
-      if (!phone) {
-        toast.error("Please enter your phone number");
-        return;
+    try {
+      setSending(true);
+      const body = new URLSearchParams();
+      body.append("mobile", phone);
+      const res = await fetch(`${baseUrl}public/vendor-login-mobile-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success(data?.message || "OTP sent");
+        setStep("OTP");
+        setTimer(30); // 30s cooldown
+      } else {
+        toast.error(data?.message || "Failed to send OTP");
       }
-
-      try {
-        const response = await fetch(`${import.meta.env.VITE_BASE_UR}public/vendor-forgot-password`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ phone }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          toast.success("OTP sent to your phone number");
-          setForgotPasswordStep(2);
-        } else {
-          toast.error(data?.message || "Failed to send OTP");
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Something went wrong");
-      }
-    } else if (forgotPasswordStep === 2) {
-      if (!otp || !newPassword || !confirmPassword) {
-        toast.error("Please fill all fields");
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        toast.error("Passwords do not match");
-        return;
-      }
-
-      try {
-        const response = await fetch(`${import.meta.env.VITE_BASE_UR}public/vendor-forgot-password-otp-verify`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            phone,
-            otp,
-            newpassword: newPassword
-          }),
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          toast.success("Password reset successfully");
-          setShowForgotPassword(false);
-          setForgotPasswordStep(1);
-          // Clear all fields
-          setPhone("");
-          setOtp("");
-          setNewPassword("");
-          setConfirmPassword("");
-        } else {
-          toast.error(data?.message || "Failed to reset password");
-        }
-      } catch (err) {
-        console.error(err);
-        toast.error("Something went wrong");
-      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Network error");
+    } finally {
+      setSending(false);
     }
   };
+
+  const verifyOtp = async () => {
+    if (!isValidOtp(otp)) {
+      toast.error("Enter valid OTP");
+      return;
+    }
+    try {
+      setVerifying(true);
+      const body = new URLSearchParams();
+      body.append("phone", phone);
+      body.append("otp", otp);
+      const res = await fetch(`${baseUrl}public/vendor-verify-mobile-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: body.toString(),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data?.token && data?.user) {
+        const rawRole = (data.user.role || "").toString();
+        const upperRole = rawRole.toUpperCase();
+        const lowerRole = rawRole.toLowerCase();
+        setDetectedRole(upperRole);
+        if (upperRole === "ADMIN") {
+          Cookies.set("admin_token", data.token);
+        } else if (upperRole === "VENDOR") {
+          Cookies.set("vendor_token", data.token);
+        }
+        Cookies.set("user_role", lowerRole);
+        Cookies.set("user_data", JSON.stringify(data.user));
+        toast.success("Logged in");
+        if (upperRole === "ADMIN") navigate("/dashboard");
+        else if (upperRole === "VENDOR") navigate("/vendor/dashboard");
+        else toast.error("Unknown role");
+      } else {
+        toast.error(data?.message || "OTP verify failed");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Network error");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // Trigger send / verify on Enter key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return;
+      if (step === "PHONE") {
+        if (!sending && isValidPhone(phone)) requestOtp();
+      } else if (step === "OTP") {
+        if (!verifying && isValidOtp(otp)) verifyOtp();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [step, phone, otp, sending, verifying]);
 
   return (
     <>
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <img src="logo.png" alt="Shopinger Logo" className="mx-auto h-12 w-auto mb-2" />
-            <p className="text-gray-600">
-              {showForgotPassword ? "Reset your password" : "Sign in to your account"}
-            </p>
+            <img
+              src="logo.png"
+              alt="Shopinger Logo"
+              className="mx-auto h-12 w-auto mb-3"
+            />
+            <p className="text-gray-600">Sign in with OTP</p>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Login</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-5">
+                {/* Role selection removed; single OTP flow */}
 
-          {!showForgotPassword ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">Login</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
+                {step === "PHONE" && (
                   <div>
-                    <Label>Login As</Label>
-                    <RadioGroup 
-                      defaultValue="vendor" 
-                      className="flex gap-4 mt-2"
-                      onValueChange={(value) => setUserType(value)}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="admin" id="admin" />
-                        <Label htmlFor="admin">Admin</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="vendor" id="vendor" />
-                        <Label htmlFor="vendor">Vendor</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-gray-600 text-sm">+91</span>
                       <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Enter your password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
+                        id="phone"
+                        type="tel"
+                        placeholder="Enter phone number"
+                        value={phone}
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10);
+                          setPhone(val);
+                        }}
+                        maxLength={10}
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        className="flex-1"
                       />
+                    </div>
+                  </div>
+                )}
+
+                {step === "OTP" && (
+                  <div>
+                    <Label htmlFor="otp">Enter OTP</Label>
+                    <Input
+                      id="otp"
+                      type="text"
+                      placeholder="4-6 digit OTP"
+                      value={otp}
+                      onChange={(e) =>
+                        setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                      }
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="mt-1"
+                    />
+                    <div className="flex justify-between items-center mt-2 text-sm">
                       <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8"
+                        onClick={() => timer === 0 && requestOtp()}
+                        disabled={timer > 0 || sending}
+                        className={`text-blue-600 disabled:opacity-50`}
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        Resend {timer > 0 && `in ${timer}s`}
                       </button>
+                      {detectedRole && (
+                        <span className="text-gray-600">
+                          Role: {detectedRole}
+                        </span>
+                      )}
                     </div>
                   </div>
+                )}
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="remember"
-                        checked={rememberMe}
-                        onCheckedChange={(checked) =>
-                          setRememberMe(checked === true)
-                        }
-                      />
-                      <Label htmlFor="remember" className="text-sm">
-                        Remember me
-                      </Label>
-                    </div>
-                    <button 
-                      type="button" 
-                      className="text-sm text-blue-600"
-                      onClick={() => setShowForgotPassword(true)}
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={step === "PHONE" ? requestOtp : verifyOtp}
+                  disabled={
+                    step === "PHONE"
+                      ? !isValidPhone(phone) || sending
+                      : !isValidOtp(otp) || verifying
+                  }
+                >
+                  {step === "PHONE"
+                    ? sending
+                      ? "Sending..."
+                      : "Send OTP"
+                    : verifying
+                    ? "Verifying..."
+                    : "Verify OTP"}
+                </Button>
 
-                  <Button type="submit" className="w-full">
-                    Sign In
-                  </Button>
-                </form>
-
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-gray-600">
-                    Don&apos;t have an account?{" "}
-                    <Link to="/register" className="text-blue-600">
-                      <Button variant="link" className="p-0">
-                        Vendor Register
-                      </Button>
-                    </Link>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                {step === "OTP" && (
+                  <button
+                    type="button"
                     onClick={() => {
-                      setShowForgotPassword(false);
-                      setForgotPasswordStep(1);
+                      setStep("PHONE");
+                      setOtp("");
+                      setDetectedRole(null);
                     }}
+                    className="text-sm text-gray-600 hover:underline"
                   >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
-                  <CardTitle className="text-center flex-1">
-                    Forgot Password
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {forgotPasswordStep === 1 ? (
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-600 text-sm">+91</span>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="Enter your registered phone number"
-                          value={phone}
-                          onChange={(e) => {
-                            // Only allow numbers, max 10 digits
-                            const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                            setPhone(val);
-                          }}
-                          required
-                          maxLength={10}
-                          inputMode="numeric"
-                          pattern="[0-9]{10}"
-                          className="flex-1"
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500 mt-2">
-                        We'll send an OTP to this number to verify your identity.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div>
-                        <Label htmlFor="otp">OTP</Label>
-                        <Input
-                          id="otp"
-                          type="text"
-                          placeholder="Enter the OTP you received"
-                          value={otp}
-                          onChange={(e) => setOtp(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="newPassword">New Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="newPassword"
-                            type={showNewPassword ? "text" : "password"}
-                            placeholder="Enter your new password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8"
-                          >
-                            {showNewPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="confirmPassword">Confirm Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="confirmPassword"
-                            type={showConfirmPassword ? "text" : "password"}
-                            placeholder="Confirm your new password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8"
-                          >
-                            {showConfirmPassword ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    <ArrowLeft className="inline h-4 w-4 mr-1" /> Change number
+                  </button>
+                )}
 
-                  <Button 
-                    type="button" 
-                    className="w-full"
-                    onClick={handleForgotPassword}
+                <div className="text-center text-sm text-gray-600 pt-2">
+                  Don't have an account?{" "}
+                  <Link
+                    to="/register"
+                    className="text-blue-600 hover:underline"
                   >
-                    {forgotPasswordStep === 1 ? "Send OTP" : "Reset Password"}
-                  </Button>
+                    Vendor Register
+                  </Link>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
+              </div>
+            </CardContent>
+          </Card>
           <div className="mt-8 text-center text-sm text-gray-500">
-            <p>© 2025 Shopinger. All rights reserved.</p>
+            © 2025 Shopinger. All rights reserved.
           </div>
         </div>
       </div>
-   
     </>
   );
 };

@@ -266,6 +266,8 @@ const filteredVendors = vendors.filter((vendor) =>
       </div>
 
       {/* Edit Vendor Modal */}
+
+
       <Dialog open={isAddVendorOpen} onOpenChange={setIsAddVendorOpen}>
         <DialogContent className="sm:max-w-[700px]">
           <DialogHeader>
@@ -428,6 +430,7 @@ const filteredVendors = vendors.filter((vendor) =>
       </Dialog>
 
       {/* Vendors Table */}
+      
       <Card>
         <CardHeader>
           <CardTitle>Pending Vendor Approvals</CardTitle>
