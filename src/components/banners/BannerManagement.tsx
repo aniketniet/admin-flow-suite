@@ -39,12 +39,12 @@ import {
 
 interface Banner {
   id: number;
-  type: string;
+  type: string | null;
   imgUrl: string;
-  title: string;
-  description: string;
-  catId: number;
-  subCatId: number;
+  title: string | null;
+  description: string | null;
+  catId: number | null;
+  subCatId: number | null;
   status: number;
   createdAt: string;
   updatedAt: string;
@@ -271,11 +271,11 @@ export function BannerManagement() {
   const handleEditClick = (banner: Banner) => {
     setCurrentBanner(banner);
     setFormData({
-      title: banner.title,
-      description: banner.description,
-      type: banner.type,
-      catId: banner.catId.toString(),
-      subCatId: banner.subCatId.toString(),
+      title: banner.title || "",
+      description: banner.description || "",
+      type: banner.type || "",
+      catId: banner.catId ? banner.catId.toString() : "",
+      subCatId: banner.subCatId ? banner.subCatId.toString() : "",
       status: banner.status.toString(),
       image: null,
     });
@@ -285,14 +285,30 @@ export function BannerManagement() {
   const handleEditSubmit = async () => {
     if (!currentBanner) return;
 
+    // No validation needed for edit - image is optional in edit mode
+    // All fields are optional
+
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("catId", formData.catId);
-      formDataToSend.append("subCatId", formData.subCatId);
-      formDataToSend.append("type", formData.type);
+
+      // Only append non-empty optional fields
+      if (formData.title.trim()) {
+        formDataToSend.append("title", formData.title);
+      }
+      if (formData.description.trim()) {
+        formDataToSend.append("description", formData.description);
+      }
+      if (formData.type.trim()) {
+        formDataToSend.append("type", formData.type);
+      }
+      if (formData.catId) {
+        formDataToSend.append("catId", formData.catId);
+      }
+      if (formData.subCatId) {
+        formDataToSend.append("subCatId", formData.subCatId);
+      }
       formDataToSend.append("status", formData.status);
+
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
@@ -337,17 +353,37 @@ export function BannerManagement() {
   };
 
   const handleAddSubmit = async () => {
+    // Validate required field (only image)
+    if (!formData.image) {
+      toast({
+        title: "Error",
+        description: "Banner image is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const formDataToSend = new FormData();
-      formDataToSend.append("title", formData.title);
-      formDataToSend.append("description", formData.description);
-      formDataToSend.append("catId", formData.catId);
-      formDataToSend.append("subCatId", formData.subCatId);
-      formDataToSend.append("type", formData.type);
-      formDataToSend.append("status", formData.status);
-      if (formData.image) {
-        formDataToSend.append("image", formData.image);
+      formDataToSend.append("image", formData.image);
+
+      // Only append non-empty optional fields
+      if (formData.title.trim()) {
+        formDataToSend.append("title", formData.title);
       }
+      if (formData.description.trim()) {
+        formDataToSend.append("description", formData.description);
+      }
+      if (formData.type.trim()) {
+        formDataToSend.append("type", formData.type);
+      }
+      if (formData.catId) {
+        formDataToSend.append("catId", formData.catId);
+      }
+      if (formData.subCatId) {
+        formDataToSend.append("subCatId", formData.subCatId);
+      }
+      formDataToSend.append("status", formData.status);
 
       const response = await fetch(
         `${import.meta.env.VITE_BASE_UR}admin/add-banner`,
@@ -414,8 +450,11 @@ export function BannerManagement() {
 
   const filteredBanners = banners.filter((banner) => {
     const matchesSearch =
-      banner.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      banner.type.toLowerCase().includes(searchTerm.toLowerCase());
+      searchTerm === "" ||
+      (banner.title &&
+        banner.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (banner.type &&
+        banner.type.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesStatus =
       statusFilter === "all" || banner.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -487,7 +526,7 @@ export function BannerManagement() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="title">Banner Title</Label>
+                  <Label htmlFor="title">Banner Title (Optional)</Label>
                   <Input
                     id="title"
                     name="title"
@@ -497,7 +536,7 @@ export function BannerManagement() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type">Type (Optional)</Label>
                   <Input
                     id="type"
                     name="type"
@@ -507,7 +546,7 @@ export function BannerManagement() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">Description (Optional)</Label>
                   <Input
                     id="description"
                     name="description"
@@ -517,7 +556,7 @@ export function BannerManagement() {
                   />
                 </div>
                 <div>
-                  <Label>Main Category</Label>
+                  <Label>Main Category (Optional)</Label>
                   <Select
                     value={formData.catId}
                     onValueChange={(value) =>
@@ -540,7 +579,7 @@ export function BannerManagement() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Subcategory</Label>
+                  <Label>Subcategory (Optional)</Label>
                   <Select
                     value={formData.subCatId}
                     onValueChange={(value) =>
@@ -564,12 +603,13 @@ export function BannerManagement() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="image">Banner Image</Label>
+                  <Label htmlFor="image">Banner Image *</Label>
                   <Input
                     id="image"
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
+                    required
                   />
                 </div>
                 <DialogFooter>
@@ -630,22 +670,30 @@ export function BannerManagement() {
                   className="w-full h-32 object-cover rounded-md bg-gray-100"
                 />
                 <div>
-                  <h3 className="font-medium">{banner.title}</h3>
-                  <p className="text-sm text-gray-500">{banner.type}</p>
+                  <h3 className="font-medium">
+                    {banner.title || "Untitled Banner"}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {banner.type || "No type specified"}
+                  </p>
                   <p className="text-sm text-gray-600 mt-1">
-                    {banner.description}
+                    {banner.description || "No description"}
                   </p>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>
                     Category:{" "}
-                    {categories.find((cat) => cat.id === banner.catId)?.name ||
-                      banner.catId}
+                    {banner.catId
+                      ? categories.find((cat) => cat.id === banner.catId)
+                          ?.name || banner.catId
+                      : "None"}
                   </span>
                   <span>
                     Subcategory:{" "}
-                    {subCategories.find((sub) => sub.id === banner.subCatId)
-                      ?.name || banner.subCatId}
+                    {banner.subCatId
+                      ? subCategories.find((sub) => sub.id === banner.subCatId)
+                          ?.name || banner.subCatId
+                      : "None"}
                   </span>
                 </div>
                 <div className="text-xs text-gray-500">
@@ -665,7 +713,7 @@ export function BannerManagement() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-title">Banner Title</Label>
+              <Label htmlFor="edit-title">Banner Title (Optional)</Label>
               <Input
                 id="edit-title"
                 name="title"
@@ -675,7 +723,7 @@ export function BannerManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="edit-type">Type</Label>
+              <Label htmlFor="edit-type">Type (Optional)</Label>
               <Input
                 id="edit-type"
                 name="type"
@@ -685,7 +733,7 @@ export function BannerManagement() {
               />
             </div>
             <div>
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-description">Description (Optional)</Label>
               <Input
                 id="edit-description"
                 name="description"
@@ -695,7 +743,7 @@ export function BannerManagement() {
               />
             </div>
             <div>
-              <Label>Main Category</Label>
+              <Label>Main Category (Optional)</Label>
               <Select
                 value={formData.catId}
                 onValueChange={(value) =>
@@ -718,7 +766,7 @@ export function BannerManagement() {
               </Select>
             </div>
             <div>
-              <Label>Subcategory</Label>
+              <Label>Subcategory (Optional)</Label>
               <Select
                 value={formData.subCatId}
                 onValueChange={(value) =>
@@ -756,7 +804,7 @@ export function BannerManagement() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="edit-image">Banner Image</Label>
+              <Label htmlFor="edit-image">Banner Image (Optional)</Label>
               <Input
                 id="edit-image"
                 type="file"

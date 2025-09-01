@@ -5,9 +5,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import JoditEditor from "jodit-react";
 
 const UpdateProductManagement = () => {
-
-  
-  const id  = useParams().productId;
+  const id = useParams().productId;
 
   const navigate = useNavigate();
   const [product, setProduct] = useState({
@@ -24,18 +22,15 @@ const UpdateProductManagement = () => {
         stock: "",
         sellingprice: "",
         originalPrice: "",
-        attributes: [
-        
-          { key: "size", value: "" },
-        ],
+        attributes: [{ key: "size", value: "" }],
       },
     ],
   });
 
-const editor = useRef(null);
+  const editor = useRef(null);
 
   // Jodit configuration
-const joditConfig = {
+  const joditConfig = {
     readonly: false,
     toolbar: true,
     spellcheck: true,
@@ -45,53 +40,63 @@ const joditConfig = {
     showCharsCounter: true,
     showWordsCounter: true,
     showXPathInStatusbar: true,
-    
+
     // Clipboard settings
     clipboard: {
-        // Try different paste actions:
-        // 'insert_as_html' - keeps original HTML
-        // 'insert_clear_html' - cleans HTML
-        // 'insert_only_text' - plain text only
-        defaultActionOnPaste: 'insert_as_html',
-        
-        // Disable all paste filters temporarily for testing
-        formaters: [],
-        
-        // Allow pasting from all sources
-        allowNativePaste: true,
-        
-        // Don't ask before pasting
-        askBeforePasteFromWord: false,
-        askBeforePasteHTML: false
+      // Try different paste actions:
+      // 'insert_as_html' - keeps original HTML
+      // 'insert_clear_html' - cleans HTML
+      // 'insert_only_text' - plain text only
+      defaultActionOnPaste: "insert_as_html",
+
+      // Disable all paste filters temporarily for testing
+      formaters: [],
+
+      // Allow pasting from all sources
+      allowNativePaste: true,
+
+      // Don't ask before pasting
+      askBeforePasteFromWord: false,
+      askBeforePasteHTML: false,
     },
-    
+
     // Disable clean HTML for testing
     cleanHTML: false,
     //    style: {
     //     'list-style-type': 'disc', // For unordered lists
     //     'list-style-position': 'inside'
     // },
-    
-    // Disable all paste plugins temporarily
-    disablePlugins: ['paste', 'pasteStorage', 'clipboard'],
-    
-    buttons: [
-        "source",
-        "|",
-        "bold", "italic", "underline", "strikethrough",
-        "|",
-        "ul", "ol",
-        "|",
-        "font", "fontsize", "brush", "paragraph",
-        "|",
-        "table", "link",
-        "|",
-        "align", "undo", "redo",
-        "|",
-        "hr", "fullsize"
-    ]
-};
 
+    // Disable all paste plugins temporarily
+    disablePlugins: ["paste", "pasteStorage", "clipboard"],
+
+    buttons: [
+      "source",
+      "|",
+      "bold",
+      "italic",
+      "underline",
+      "strikethrough",
+      "|",
+      "ul",
+      "ol",
+      "|",
+      "font",
+      "fontsize",
+      "brush",
+      "paragraph",
+      "|",
+      "table",
+      "link",
+      "|",
+      "align",
+      "undo",
+      "redo",
+      "|",
+      "hr",
+      "fullsize",
+    ],
+  };
 
   const [images, setImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
@@ -121,7 +126,7 @@ const joditConfig = {
             },
           }
         );
-        
+
         const productData = productResponse.data.data;
         console.log("Fetched product data:", productData);
         setProduct({
@@ -131,40 +136,41 @@ const joditConfig = {
           subCategoryId: productData.subCategoryId?.toString() || "",
           subSubCategoryId: productData.subSubCategoryId?.toString() || "",
           vendorId: productData.vendorId?.toString() || "",
-          variants: productData.variants && productData.variants.length > 0
-            ? productData.variants.map(variant => ({
-          sku: variant.sku || "",
-          price: variant.price?.toString() || "",
-          originalPrice: variant.originalPrice?.toString() || "",
-          stock: variant.stock?.toString() || "",
-          sellingprice: variant.sellingprice?.toString() || "",
-          attributes: variant.attributes || [
-            
-            { key: "size", value: "" },
-          ],
-              }))
-            : [
-          {
-            sku: "",
-            price: "",
-            stock: "",
-            originalPrice: "",
-            sellingprice: "",
-            attributes: [
-              
-              { key: "size", value: "" },
-            ],
-          },
-              ],
+          variants:
+            productData.variants && productData.variants.length > 0
+              ? productData.variants.map((variant) => ({
+                  sku: variant.sku || "",
+                  price: variant.price?.toString() || "",
+                  originalPrice: variant.originalPrice?.toString() || "",
+                  stock: variant.stock?.toString() || "",
+                  sellingprice: variant.sellingprice?.toString() || "",
+                  attributes: variant.attributes || [
+                    { key: "size", value: "" },
+                  ],
+                }))
+              : [
+                  {
+                    sku: "",
+                    price: "",
+                    stock: "",
+                    originalPrice: "",
+                    sellingprice: "",
+                    attributes: [{ key: "size", value: "" }],
+                  },
+                ],
         });
 
-     // Flatten all variant images into a single array for display
+        // Flatten all variant images into a single array for display
         const allVariantImages = productData.variants
-          .flatMap((variant) => Array.isArray(variant.images) ? variant.images : [])
-          .filter((img, index, self) => self.findIndex(i => i === img) === index); // Remove duplicates
-        
+          .flatMap((variant) =>
+            Array.isArray(variant.images) ? variant.images : []
+          )
+          .filter(
+            (img, index, self) => self.findIndex((i) => i === img) === index
+          ); // Remove duplicates
+
         setExistingImages(allVariantImages);
-        console.log("Existing images:", allVariantImages)
+        console.log("Existing images:", allVariantImages);
 
         // Fetch main categories with their subcategories and sub-subcategories
         const mainCategoriesResponse = await axios.get(
@@ -175,21 +181,23 @@ const joditConfig = {
             },
           }
         );
-        
+
         setMainCategories(mainCategoriesResponse.data.categories || []);
 
         // If product has main category, fetch its subcategories
         if (productData.mainCategoryId) {
-          const selectedMainCategory = mainCategoriesResponse.data.categories.find(
-            cat => cat.id === productData.mainCategoryId
-          );
+          const selectedMainCategory =
+            mainCategoriesResponse.data.categories.find(
+              (cat) => cat.id === productData.mainCategoryId
+            );
           setSubCategories(selectedMainCategory?.subCategories || []);
 
           // If product has sub category, fetch its sub-subcategories
           if (productData.subCategoryId) {
-            const selectedSubCategory = selectedMainCategory?.subCategories.find(
-              subCat => subCat.id === productData.subCategoryId
-            );
+            const selectedSubCategory =
+              selectedMainCategory?.subCategories.find(
+                (subCat) => subCat.id === productData.subCategoryId
+              );
             setSubSubCategories(selectedSubCategory?.subSubCategories || []);
           }
         }
@@ -216,63 +224,61 @@ const joditConfig = {
     fetchData();
   }, [id, token, isAdmin]);
 
+  // Only auto-update sellingprice if it hasn't been manually edited AND it's a new variant (not loaded from API)
+  useEffect(() => {
+    if (product.variants.length > 0 && product.mainCategoryId) {
+      const selectedMainCategory = mainCategories.find(
+        (cat) => cat.id === parseInt(product.mainCategoryId)
+      );
+      const sgstRate = selectedMainCategory?.sgst || 0;
+      const cgstRate = selectedMainCategory?.cgst || 0;
 
-
-    // Only auto-update sellingprice if it hasn't been manually edited AND it's a new variant (not loaded from API)
-    useEffect(() => {
-      if (product.variants.length > 0 && product.mainCategoryId) {
-        const selectedMainCategory = mainCategories.find(
-          (cat) => cat.id === parseInt(product.mainCategoryId)
-        );
-        const sgstRate = selectedMainCategory?.sgst || 0;
-        const cgstRate = selectedMainCategory?.cgst || 0;
-
-        const updatedVariants = product.variants.map((variant) => {
-          const originalPrice = parseFloat(variant.originalPrice) || 0;
-          const sgst = (originalPrice * (sgstRate / 100)).toFixed(2);
-          const cgst = (originalPrice * (cgstRate / 100)).toFixed(2);
-          const sgstRounded = Math.ceil(parseFloat(sgst));
-          const cgstRounded = Math.ceil(parseFloat(cgst));
-          const totalPrice = (originalPrice + sgstRounded + cgstRounded).toFixed(2);
-
-          // Only auto-update sellingprice if it hasn't been manually edited (isManualEdit not true)
-          // If sellingprice is set from API, keep it as is unless user changes originalPrice and hasn't manually edited sellingprice
-          let sellingprice = variant.sellingprice;
-          if (
-            (!variant.isManualEdit || variant.sellingprice === "" || variant.sellingprice == null) &&
-            (!("id" in variant) || variant.sellingprice === "" || variant.sellingprice == null)
-          ) {
-            sellingprice = variant.sellingprice;
-          }
-
-          return {
-            ...variant,
-            sgst,
-            cgst,
-            price: totalPrice, // Always keep price updated
-            sellingprice,
-          };
-        });
-
-        // Only update if sgst/cgst/price changed, but don't overwrite sellingprice if manually edited
-        const isChanged = updatedVariants.some(
-          (v, i) =>
-            v.price !== product.variants[i].price ||
-            v.sgst !== product.variants[i].sgst ||
-            v.cgst !== product.variants[i].cgst
+      const updatedVariants = product.variants.map((variant) => {
+        const originalPrice = parseFloat(variant.originalPrice) || 0;
+        const sgst = (originalPrice * (sgstRate / 100)).toFixed(2);
+        const cgst = (originalPrice * (cgstRate / 100)).toFixed(2);
+        const sgstRounded = Math.ceil(parseFloat(sgst));
+        const cgstRounded = Math.ceil(parseFloat(cgst));
+        const totalPrice = (originalPrice + sgstRounded + cgstRounded).toFixed(
+          2
         );
 
-        if (isChanged) {
-          setProduct((prev) => ({ ...prev, variants: updatedVariants }));
+        // Only auto-update sellingprice if it hasn't been manually edited (isManualEdit not true)
+        // If sellingprice is set from API, keep it as is unless user changes originalPrice and hasn't manually edited sellingprice
+        let sellingprice = variant.sellingprice;
+        if (
+          (!variant.isManualEdit ||
+            variant.sellingprice === "" ||
+            variant.sellingprice == null) &&
+          (!("id" in variant) ||
+            variant.sellingprice === "" ||
+            variant.sellingprice == null)
+        ) {
+          sellingprice = variant.sellingprice;
         }
+
+        return {
+          ...variant,
+          sgst,
+          cgst,
+          price: totalPrice, // Always keep price updated
+          sellingprice,
+        };
+      });
+
+      // Only update if sgst/cgst/price changed, but don't overwrite sellingprice if manually edited
+      const isChanged = updatedVariants.some(
+        (v, i) =>
+          v.price !== product.variants[i].price ||
+          v.sgst !== product.variants[i].sgst ||
+          v.cgst !== product.variants[i].cgst
+      );
+
+      if (isChanged) {
+        setProduct((prev) => ({ ...prev, variants: updatedVariants }));
       }
-    }, [product.variants, product.mainCategoryId, mainCategories]);
-
-
-
-
-
-
+    }
+  }, [product.variants, product.mainCategoryId, mainCategories]);
 
   useEffect(() => {
     // When main category changes, update sub categories
@@ -283,10 +289,10 @@ const joditConfig = {
       setSubCategories(selectedMainCategory?.subCategories || []);
       setSubSubCategories([]);
       if (selectedMainCategory?.subCategories?.length === 0) {
-        setProduct(prev => ({
+        setProduct((prev) => ({
           ...prev,
           subCategoryId: "",
-          subSubCategoryId: ""
+          subSubCategoryId: "",
         }));
       }
     }
@@ -300,9 +306,9 @@ const joditConfig = {
       );
       setSubSubCategories(selectedSubCategory?.subSubCategories || []);
       if (selectedSubCategory?.subSubCategories?.length === 0) {
-        setProduct(prev => ({
+        setProduct((prev) => ({
           ...prev,
-          subSubCategoryId: ""
+          subSubCategoryId: "",
         }));
       }
     }
@@ -359,10 +365,7 @@ const joditConfig = {
           stock: "",
           originalPrice: "",
           sellingprice: "",
-          attributes: [
-           
-            { key: "size", value: "" },
-          ],
+          attributes: [{ key: "size", value: "" }],
         },
       ],
     }));
@@ -416,22 +419,21 @@ const joditConfig = {
       if (isAdmin) {
         formData.append("vendorId", product.vendorId);
       }
-       // Prepare variants data with existing images if no new images are uploaded
+      // Prepare variants data with existing images if no new images are uploaded
 
-      const variantsData = product.variants.map(variant => {
+      const variantsData = product.variants.map((variant) => {
         return {
           ...variant,
           // If no new images are uploaded, keep the existing images
-          images: images.length === 0 ? existingImages : []
+          images: images.length === 0 ? existingImages : [],
         };
       });
-      
+
       formData.append("variants", JSON.stringify(variantsData));
-     
+
       // existingImages.forEach((url) => {
       //   formData.append("images_0", url);
       // });
-
 
       images.forEach((image, index) => {
         formData.append(`images_0`, image);
@@ -515,7 +517,6 @@ const joditConfig = {
                     id="name"
                     value={product.name}
                     onChange={handleChange}
-                    
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   />
                 </div>
@@ -532,7 +533,6 @@ const joditConfig = {
                     name="mainCategoryId"
                     value={product.mainCategoryId}
                     onChange={handleChange}
-                    
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   >
                     <option value="">Select a category</option>
@@ -558,7 +558,6 @@ const joditConfig = {
                     name="subCategoryId"
                     value={product.subCategoryId}
                     onChange={handleChange}
-                    
                     disabled={!product.mainCategoryId}
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   >
@@ -610,7 +609,6 @@ const joditConfig = {
                       name="vendorId"
                       value={product.vendorId}
                       onChange={handleChange}
-                      
                       className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                     >
                       <option value="">Select a vendor</option>
@@ -636,7 +634,7 @@ const joditConfig = {
                   value={product.description}
                   config={joditConfig}
                   onBlur={(newContent) =>
-                    setProduct(prev => ({ ...prev, description: newContent }))
+                    setProduct((prev) => ({ ...prev, description: newContent }))
                   }
                   className="mt-1 bg-white"
                 />
@@ -699,35 +697,38 @@ const joditConfig = {
                             onChange={(e) =>
                               handleVariantChange(variantIndex, e)
                             }
-                            
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                           />
                         </div>
                         <div>
-                        <label
-                          htmlFor={`originalPrice-${variantIndex}`}
-                          className="block text-sm font-medium text-gray-700"
-                        >
-                          Original Price <span className="text-red-500">*</span>
-                        </label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">₹</span>
+                          <label
+                            htmlFor={`originalPrice-${variantIndex}`}
+                            className="block text-sm font-medium text-gray-700"
+                          >
+                            MRP <span className="text-red-500">*</span>
+                          </label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">
+                                ₹
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              id={`originalPrice-${variantIndex}`}
+                              name="originalPrice"
+                              value={variant.originalPrice || ""}
+                              onChange={(e) =>
+                                handleVariantChange(variantIndex, e)
+                              }
+                              required
+                              className="border border-gray-300 block w-full pl-7 pr-5 sm:text-sm rounded-md py-2 px-3"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                            />
                           </div>
-                          <input
-                            type="number"
-                            id={`originalPrice-${variantIndex}`}
-                            name="originalPrice"
-                            value={variant.originalPrice || ""}
-                            onChange={(e) => handleVariantChange(variantIndex, e)}
-                            required
-                            className="border border-gray-300 block w-full pl-7 pr-5 sm:text-sm rounded-md py-2 px-3"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
                         </div>
-                      </div>
                         <div>
                           <label
                             htmlFor={`stock-${variantIndex}`}
@@ -743,13 +744,12 @@ const joditConfig = {
                             onChange={(e) =>
                               handleVariantChange(variantIndex, e)
                             }
-                            
                             className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                             min="0"
                           />
                         </div>
                       </div>
-                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
                           <label
                             htmlFor={`sellingprice-${variantIndex}`}
@@ -781,32 +781,39 @@ const joditConfig = {
                         </div>
 
                         <div>
-                          <label
+                          {/* <label
                             htmlFor={`price-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700 mt-2"
                           >
                             Price <span className="text-red-500">*</span>
-                          </label>
-                          <div className="mt-1 relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">
-                                ₹
-                              </span>
+                          </label> */}
+                          <div className="hidden">
+                            <label
+                              htmlFor={`price-${variantIndex}`}
+                              className="block text-sm font-medium text-gray-700 mt-2"
+                            >
+                              Price <span className="text-red-500">*</span>
+                            </label>
+                            <div className="mt-1 relative rounded-md shadow-sm">
+                              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span className="text-gray-500 sm:text-sm">
+                                  ₹
+                                </span>
+                              </div>
+                              <input
+                                type="number"
+                                id={`price-${variantIndex}`}
+                                name="price"
+                                value={variant.price}
+                                onChange={(e) =>
+                                  handleVariantChange(variantIndex, e)
+                                }
+                                required
+                                className="border border-gray-300 block w-full pl-7 pr-5 sm:text-sm rounded-md py-2 px-3"
+                                placeholder="0.00"
+                                min="0"
+                              />
                             </div>
-                            <input
-                              type="number"
-                              id={`price-${variantIndex}`}
-                              name="price"
-                              value={variant.price}
-                              onChange={(e) =>
-                                handleVariantChange(variantIndex, e)
-                              }
-                              required
-                              className="border border-gray-300 block w-full pl-7 pr-5 sm:text-sm rounded-md py-2 px-3"
-                              placeholder="0.00"
-                              min="0"
-                              
-                            />
                           </div>
                         </div>
                       </div>
@@ -1002,7 +1009,9 @@ const joditConfig = {
                           <button
                             type="button"
                             onClick={() =>
-                              setImages((prev) => prev.filter((_, i) => i !== index))
+                              setImages((prev) =>
+                                prev.filter((_, i) => i !== index)
+                              )
                             }
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                           >
@@ -1032,7 +1041,9 @@ const joditConfig = {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() => navigate(isAdmin ? "/admin/products" : "/vendor/products")}
+                    onClick={() =>
+                      navigate(isAdmin ? "/admin/products" : "/vendor/products")
+                    }
                     className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold-500"
                   >
                     Cancel

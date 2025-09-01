@@ -144,10 +144,11 @@ export function PendingVendors() {
     setIsAddVendorOpen(true);
   };
 
-const filteredVendors = vendors.filter((vendor) =>
-  (vendor?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
-  vendor?.email?.toLowerCase()?.includes(searchTerm?.toLowerCase()))
-);
+  const filteredVendors = vendors.filter(
+    (vendor) =>
+      vendor?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase()) ||
+      vendor?.email?.toLowerCase()?.includes(searchTerm?.toLowerCase())
+  );
 
   const onSubmit = async (values) => {
     console.log("Submitting vendor:", values);
@@ -266,7 +267,6 @@ const filteredVendors = vendors.filter((vendor) =>
       </div>
 
       {/* Edit Vendor Modal */}
-
 
       <Dialog open={isAddVendorOpen} onOpenChange={setIsAddVendorOpen}>
         <DialogContent className="sm:max-w-[700px]">
@@ -430,7 +430,7 @@ const filteredVendors = vendors.filter((vendor) =>
       </Dialog>
 
       {/* Vendors Table */}
-      
+
       <Card>
         <CardHeader>
           <CardTitle>Pending Vendor Approvals</CardTitle>
@@ -440,6 +440,7 @@ const filteredVendors = vendors.filter((vendor) =>
             <TableHeader>
               <TableRow>
                 <TableHead>Vendor Name</TableHead>
+                <TableHead>Phone</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Shop Name</TableHead>
                 <TableHead>Status</TableHead>
@@ -453,6 +454,7 @@ const filteredVendors = vendors.filter((vendor) =>
                   <TableCell className="font-medium">
                     {vendor.name || "Not provided"}
                   </TableCell>
+                  <TableCell>{vendor.phone || "Not provided"}</TableCell>
                   <TableCell>{vendor.email || "Not provided"}</TableCell>
                   <TableCell>{vendor.shopname || "Not provided"}</TableCell>
                   <TableCell>
