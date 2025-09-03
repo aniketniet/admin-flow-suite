@@ -58,15 +58,15 @@ const InvoicePreview = ({ order, onClose }) => {
   };
 
   // Get states for comparison
-  const vendorState = vendor.pickupAddresses?.[0]?.state || "Delhi";
-  const customerState = order.address.state || "Delhi";
+  const vendorState = vendor.pickupAddresses?.[0]?.state || "";
+  const customerState = order.address.state || " ";
   const isSameState = vendorState.toLowerCase() === customerState.toLowerCase();
 
   // Seller info
   const soldBy = {
     name: vendor.name,
     address: vendor.pickupAddresses?.[0]?.address || vendor.address,
-    gstin: vendor.gst_no || "07ABCDE1234F1Z5",
+    gstin: vendor.gst_no || " ",
     stateCode: "07", // Delhi state code
   };
 
@@ -75,23 +75,23 @@ const InvoicePreview = ({ order, onClose }) => {
     name:
       `${order.address.fristname || ""} ${
         order.address.lastname || ""
-      }`.trim() || "Customer",
+      }`.trim() || " ",
     address: [
       order.address.houseNo && `H. No ${order.address.houseNo}`,
       order.address.street,
       `${order.address.city}, ${order.address.district}`,
       `PIN: ${order.address.pincode}`,
-      order.address.country || "India",
+      order.address.country || " ",
     ]
       .filter(Boolean)
       .join(", "),
-    state: order.address.state || "Delhi",
+    state: order.address.state || " ",
     stateCode: "07", // Delhi state code
   };
 
   const shippingAddress = {
-    placeOfSupply: order.address.city || "New Delhi",
-    placeOfDelivery: order.address.city || "New Delhi",
+    placeOfSupply: order.address.city || " ",
+    placeOfDelivery: order.address.city || "",
   };
 
   // Prepare items with proper GST calculations and calculate total amounts
