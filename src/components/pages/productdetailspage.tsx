@@ -29,7 +29,9 @@ const ProductdetailsPage = () => {
         if (isAdmin) {
           url = `${import.meta.env.VITE_BASE_UR}admin/get-product/${productId}`;
         } else if (isVendor) {
-          url = `${import.meta.env.VITE_BASE_UR}vendor/get-product/${productId}`;
+          url = `${
+            import.meta.env.VITE_BASE_UR
+          }vendor/get-product/${productId}`;
         }
 
         const response = await fetch(url, options);
@@ -70,7 +72,8 @@ const ProductdetailsPage = () => {
     );
 
   const variant = product.variants[0];
-  const price = parseFloat(variant.price);
+  const price = parseFloat(variant.originalPrice);
+  const sellingPrice = parseFloat(variant.sellingprice);
 
   const increaseQuantity = () => setQuantity((prev) => prev + 1);
   const decreaseQuantity = () =>
@@ -165,29 +168,28 @@ const ProductdetailsPage = () => {
               </div>
 
               <div className="mb-8">
-                <span className="text-2xl font-serif">₹{price.toFixed(2)}</span>
-                <div className="mt-2 text-sm text-gray-500">
+                <div className="flex items-baseline gap-3 mb-2">
+                  <span className="text-2xl font-bold text-gray-900">
+                    ₹{sellingPrice.toFixed(2)}
+                  </span>
+                  <span className="text-lg text-gray-500 line-through">
+                    ₹{price.toFixed(2)}
+                  </span>
+                  <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                    {Math.round(((price - sellingPrice) / price) * 100)}% OFF
+                  </span>
+                </div>
+                <div className="text-sm text-gray-500">
                   Inclusive of all taxes
                 </div>
               </div>
 
-                <div className="mb-8">
+              <div className="mb-8">
                 <h2 className="text-lg font-medium mb-4">Description</h2>
                 <div
                   className="text-gray-700 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: product.description }}
                 />
-                </div>
-
-              <div className="mb-8">
-                <h2 className="text-lg font-medium mb-4">Key Benefits</h2>
-                <ul className="list-disc pl-5 text-gray-700 space-y-2">
-                  <li>Reduces dark spots and evens out skin tone</li>
-                  <li>Boosts hydration with Hyaluronic Acid</li>
-                  <li>Dermatologist-approved formula</li>
-                  <li>Lightweight and fast-absorbing</li>
-                  <li>Suitable for daily use</li>
-                </ul>
               </div>
             </div>
           </div>

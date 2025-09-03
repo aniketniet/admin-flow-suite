@@ -436,6 +436,7 @@ export function VendorManagement() {
                   <TableHead>#</TableHead>
                   <TableHead>Vendor Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>OTP</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Status</TableHead>
@@ -449,10 +450,17 @@ export function VendorManagement() {
                     <TableCell>{filteredVendors.indexOf(vendor) + 1}</TableCell>
                     <TableCell className="font-medium">{vendor.name}</TableCell>
                     <TableCell>{vendor.email}</TableCell>
-                    <TableCell>{vendor.otp || <span className="text-gray-500">N/A</span>}</TableCell>
+                    <TableCell>{vendor.phone}</TableCell>
+                    <TableCell>
+                      {vendor.otp || <span className="text-gray-500">N/A</span>}
+                    </TableCell>
                     <TableCell>{vendor.role}</TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(vendor.status) + " pointer-events-none"}>
+                      <Badge
+                        className={
+                          getStatusColor(vendor.status) + " pointer-events-none"
+                        }
+                      >
                         {vendor.status}
                       </Badge>
                     </TableCell>
@@ -518,9 +526,8 @@ export function VendorManagement() {
                     </TableCell>
                   </TableRow>
                 )}
-
               </TableBody>
-            </Table>            
+            </Table>
           </CardContent>
         </Card>
       </div>

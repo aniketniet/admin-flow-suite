@@ -194,9 +194,12 @@ export function ProductManagement() {
     }
   };
 
-   //active and inactive products
+  //active and inactive products
 
-   const handleToggleProductStatus = async (productId: number, isActive: boolean) => {
+  const handleToggleProductStatus = async (
+    productId: number,
+    isActive: boolean
+  ) => {
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BASE_UR}vendor/update-status/${productId}`,
@@ -206,7 +209,6 @@ export function ProductManagement() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-         
         }
       );
 
@@ -485,7 +487,7 @@ export function ProductManagement() {
                           onClick={() => handleDetailClick(product.id)}
                         >
                           <Eye className="mr-2 h-4 w-4" />
-                          View Profile
+                          View Product
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() =>

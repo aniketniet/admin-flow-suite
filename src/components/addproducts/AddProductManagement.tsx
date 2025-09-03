@@ -19,16 +19,16 @@ const AddProductManagement = () => {
         stock: "",
         originalPrice: "",
         sellingprice: "",
-        attributes: [{ key: "size", value: "" }],
+        attributes: [{ key: "Size", value: "" }],
       },
     ],
   });
 
   const editor = useRef(null);
 
-// Jodit configuration
+  // Jodit configuration
 
-const joditConfig = {
+  const joditConfig = {
     readonly: false,
     toolbar: true,
     spellcheck: true,
@@ -38,52 +38,63 @@ const joditConfig = {
     showCharsCounter: true,
     showWordsCounter: true,
     showXPathInStatusbar: true,
-    
+
     // Clipboard settings
     clipboard: {
-        // Try different paste actions:
-        // 'insert_as_html' - keeps original HTML
-        // 'insert_clear_html' - cleans HTML
-        // 'insert_only_text' - plain text only
-        defaultActionOnPaste: 'insert_as_html',
-        
-        // Disable all paste filters temporarily for testing
-        formaters: [],
-        
-        // Allow pasting from all sources
-        allowNativePaste: true,
-        
-        // Don't ask before pasting
-        askBeforePasteFromWord: false,
-        askBeforePasteHTML: false
+      // Try different paste actions:
+      // 'insert_as_html' - keeps original HTML
+      // 'insert_clear_html' - cleans HTML
+      // 'insert_only_text' - plain text only
+      defaultActionOnPaste: "insert_as_html",
+
+      // Disable all paste filters temporarily for testing
+      formaters: [],
+
+      // Allow pasting from all sources
+      allowNativePaste: true,
+
+      // Don't ask before pasting
+      askBeforePasteFromWord: false,
+      askBeforePasteHTML: false,
     },
-    
+
     // Disable clean HTML for testing
     cleanHTML: false,
     //    style: {
     //     'list-style-type': 'disc', // For unordered lists
     //     'list-style-position': 'inside'
     // },
-    
+
     // Disable all paste plugins temporarily
-    disablePlugins: ['paste', 'pasteStorage', 'clipboard'],
-    
+    disablePlugins: ["paste", "pasteStorage", "clipboard"],
+
     buttons: [
-        "source",
-        "|",
-        "bold", "italic", "underline", "strikethrough",
-        "|",
-        "ul", "ol",
-        "|",
-        "font", "fontsize", "brush", "paragraph",
-        "|",
-        "table", "link",
-        "|",
-        "align", "undo", "redo",
-        "|",
-        "hr", "fullsize"
-    ]
-};
+      "source",
+      "|",
+      "bold",
+      "italic",
+      "underline",
+      "strikethrough",
+      "|",
+      "ul",
+      "ol",
+      "|",
+      "font",
+      "fontsize",
+      "brush",
+      "paragraph",
+      "|",
+      "table",
+      "link",
+      "|",
+      "align",
+      "undo",
+      "redo",
+      "|",
+      "hr",
+      "fullsize",
+    ],
+  };
 
   const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -557,15 +568,15 @@ const joditConfig = {
                 >
                   Description <span className="text-red-500">*</span>
                 </label>
-                  <JoditEditor
-                ref={editor}
-                value={product.description}
-                config={joditConfig}
-                onBlur={(newContent) =>
-                  setProduct(prev => ({ ...prev, description: newContent }))
-                }
-                className="mt-1 bg-white"
-              />
+                <JoditEditor
+                  ref={editor}
+                  value={product.description}
+                  config={joditConfig}
+                  onBlur={(newContent) =>
+                    setProduct((prev) => ({ ...prev, description: newContent }))
+                  }
+                  className="mt-1 bg-white"
+                />
               </div>
 
               <div>
@@ -655,8 +666,7 @@ const joditConfig = {
                             htmlFor={`originalPrice-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            Original Price{" "}
-                            <span className="text-red-500">*</span>
+                            MPR <span className="text-red-500">*</span>
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -710,35 +720,12 @@ const joditConfig = {
                             />
                           </div>
                         </div>
-
-                        <div>
-                          <label
-                            htmlFor={`price-${variantIndex}`}
-                            className="block text-sm font-medium text-gray-700 mt-2"
-                          >
-                            Price <span className="text-red-500">*</span>
-                          </label>
-                          <div className="mt-1 relative rounded-md shadow-sm">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500 sm:text-sm">
-                                ₹
-                              </span>
-                            </div>
-                            <input
-                              type="number"
-                              id={`price-${variantIndex}`}
-                              name="price"
-                              value={variant.price}
-                              onChange={(e) =>
-                                handleVariantChange(variantIndex, e)
-                              }
-                              required
-                              className="border border-gray-300 block w-full pl-7 pr-5 sm:text-sm rounded-md py-2 px-3"
-                              placeholder="0.00"
-                              min="0"
-                            />
-                          </div>
-                        </div>
+                        <input
+                          type="hidden"
+                          id={`price-${variantIndex}`}
+                          name="price"
+                          value={variant.price}
+                        />
                       </div>
 
                       <div className="mt-6">
