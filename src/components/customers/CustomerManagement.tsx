@@ -51,10 +51,10 @@ export function CustomerManagement() {
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || user.role.toLowerCase() === statusFilter;
+      statusFilter === "all" || user?.role?.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 

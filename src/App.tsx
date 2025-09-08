@@ -46,6 +46,7 @@ import { cn } from "./lib/utils";
 import { ContactQueriesManagement } from "./pages/ContactQueriesManagement";
 import Invoice from "./components/Invoice";
 import './App.css';
+import WalletPage from "@/components/wallet/WalletPage";
 
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const adminSectionTitles = {
   subcategories: { title: "SubCategory Management", subtitle: "Manage product subcategories" },
   banners: { title: "Banner Management", subtitle: "Manage homepage banners and promotions" },
   transactions: { title: "Transactions", subtitle: "View transaction history and wallet logs" },
+  wallet: { title: "Wallet", subtitle: "Balance, summary, and transaction history" },
   pages: { title: "Static Pages", subtitle: "Manage website content pages" },
   settings: { title: "Settings", subtitle: "Configure platform settings" },
 };
@@ -91,6 +93,7 @@ const vendorSectionTitles = {
   products: { title: "My Products", subtitle: "Manage your product listings" },
   addproducts: { title: "Add Product", subtitle: "Add new products to your store" },
   orders: { title: "My Orders", subtitle: "Track and manage your orders" },
+  wallet: { title: "Wallet", subtitle: "Your wallet balance and history" },
 };
 
 const adminSectionRoutes = [
@@ -105,6 +108,7 @@ const adminSectionRoutes = [
   { path: "/subsubcategories", key: "subsubcategories", element: <SubSubCategoryManagement/> },
   { path: "/banners", key: "banners", element: <BannerManagement /> },
   { path: "/transactions", key: "transactions", element: <TransactionManagement /> },
+  { path: "/wallet", key: "wallet", element: <WalletPage /> },
   { path: "/pages", key: "pages", element: <StaticPagesManagement /> },
   { path: "/settings", key: "settings", element: <SettingsManagement /> },
   { path: "/userprofile/:userId", key: "userprofile", element: <UserProfile /> },
@@ -118,7 +122,7 @@ const adminSectionRoutes = [
   { path: "/refundpolicy", key: "refundpolicy", element: <RefundPolicy /> },
   { path: "/termsofservice", key: "termsofservice", element: <TermsOfServicePage /> },
   { path: "/contact-us", key: "contactus", element: <ContactQueriesManagement /> },
-  { path: "/invoice", key: "invoice", element: <Invoice /> },
+  // Invoice component is used within OrderDetails, not as a standalone route
 
 ];
 
@@ -127,6 +131,7 @@ const vendorSectionRoutes = [
   { path: "/vendor/products", key: "products", element: <ProductManagement /> },
   { path: "/vendor/addproducts", key: "addproducts", element: <AddProductManagement /> },
   { path: "/vendor/orders", key: "orders", element: <OrderManagement /> },
+  { path: "/vendor/wallet", key: "wallet", element: <WalletPage /> },
   { path: "/vendor/productdetails/:productId", key: "productdetails", element: <ProductdetailsPage /> },
    { path: "/vendor/product-update/:productId", key: "productUpdate", element: <UpdateProductManagement /> },
   { path: "/vendor/orderdetails/:orderId", key: "orderdetails", element: <OrderDetails /> },

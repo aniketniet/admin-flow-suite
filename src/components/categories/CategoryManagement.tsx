@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {toast} from "sonner";
+import { toast } from "sonner";
 import {
   Table,
   TableBody,
@@ -45,6 +45,7 @@ interface Category {
   cgst: string;
   sgst: string;
   position: string;
+  commission: string;
   sortOrder: string;
   imgUrl: string;
   createdAt: string;
@@ -63,7 +64,6 @@ export function CategoryManagement() {
   const [error, setError] = useState<string | null>(null);
   const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
   const [editFormData, setEditFormData] = useState({
-    
     name: "",
     description: "",
     image: null as File | null,
@@ -71,8 +71,8 @@ export function CategoryManagement() {
     cgst: "",
     sgst: "",
     position: "",
-  platform_fee: "",
-
+    platform_fee: "",
+    commission: "",
   });
   const [addFormData, setAddFormData] = useState({
     name: "",
@@ -82,7 +82,8 @@ export function CategoryManagement() {
     cgst: "",
     sgst: "",
     position: "",
-  platform_fee: "",
+    platform_fee: "",
+    commission: "",
   });
   const [imagePreview, setImagePreview] = useState("");
   const [addImagePreview, setAddImagePreview] = useState("");
@@ -134,12 +135,10 @@ export function CategoryManagement() {
   }, [token]);
 
   const filteredCategories = categories.filter((category) => {
-   
     const matchesSearch =
       category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       category.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      
+
     return matchesSearch;
   });
 
@@ -148,9 +147,13 @@ export function CategoryManagement() {
     return date.toLocaleDateString();
   };
 
+
   const handleEditClick = (category: Category) => {
     setCurrentCategory(category);
-  const catWithFee = category as unknown as Category & { platform_fee?: string; plateform_fee?: string };
+    const catWithFee = category as unknown as Category & {
+      platform_fee?: string;
+      plateform_fee?: string;
+    };
     setEditFormData({
       name: category.name,
       description: category.description,
@@ -160,6 +163,7 @@ export function CategoryManagement() {
       sgst: category.sgst || "",
       position: category.sortOrder || "",
       platform_fee: catWithFee.platform_fee || catWithFee.plateform_fee || "",
+      commission: category.commission || "",
     });
     if (category.imgUrl) {
       setImagePreview(`${import.meta.env.VITE_BASE_URL_IMG}${category.imgUrl}`);
@@ -229,8 +233,9 @@ export function CategoryManagement() {
       formData.append("cgst", editFormData.cgst);
       formData.append("sgst", editFormData.sgst);
       formData.append("sortOrder", editFormData.position);
-  // backend expects 'plateform_fee' (typo) and it's required
-  formData.append("plateform_fee", editFormData.platform_fee);
+      // backend expects 'plateform_fee' (typo) and it's required
+      formData.append("plateform_fee", editFormData.platform_fee);
+      formData.append("commission", editFormData.commission);
       if (editFormData.image) {
         formData.append("image", editFormData.image);
       }
@@ -258,7 +263,7 @@ export function CategoryManagement() {
           )
         );
         setIsEditDialogOpen(false);
-       toast.success("Category updated successfully");
+        toast.success("Category updated successfully");
       } else {
         throw new Error(data.message || "Failed to update category");
       }
@@ -270,11 +275,16 @@ export function CategoryManagement() {
   const handleAddCategory = async () => {
     // Front-end validation matching backend required fields
     if (!addFormData.name.trim()) return toast.error("Name is required");
-    if (!addFormData.description.trim()) return toast.error("Description is required");
+    if (!addFormData.description.trim())
+      return toast.error("Description is required");
     if (!addFormData.cgst.trim()) return toast.error("CGST is required");
     if (!addFormData.sgst.trim()) return toast.error("SGST is required");
-    if (!addFormData.position.trim()) return toast.error("Sort order is required");
-    if (!addFormData.platform_fee.trim()) return toast.error("Platform fee is required");
+    if (!addFormData.position.trim())
+      return toast.error("Sort order is required");
+    if (!addFormData.platform_fee.trim())
+      return toast.error("Platform fee is required");
+    if (!addFormData.commission.trim())
+      return toast.error("Commission is required");
 
     try {
       const formData = new FormData();
@@ -285,6 +295,7 @@ export function CategoryManagement() {
       formData.append("sgst", addFormData.sgst);
       formData.append("sortOrder", addFormData.position);
       formData.append("plateform_fee", addFormData.platform_fee);
+      formData.append("commission", addFormData.commission);
       if (addFormData.image) {
         formData.append("image", addFormData.image);
       }
@@ -317,6 +328,7 @@ export function CategoryManagement() {
           position: "",
           image: null,
           platform_fee: "",
+          commission: "",
         });
         setAddImagePreview("");
         toast.success("Category added successfully");
@@ -324,7 +336,9 @@ export function CategoryManagement() {
         throw new Error(data.message || "Failed to add category");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "An unknown error occurred");
+      toast.error(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     }
   };
 
@@ -374,7 +388,7 @@ export function CategoryManagement() {
               </DialogHeader>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex flex-col space-y-2">
-                  <Label htmlFor="categoryName" >Category Name</Label>
+                  <Label htmlFor="categoryName">Category Name</Label>
                   <Input
                     id="categoryName"
                     name="name"
@@ -426,7 +440,9 @@ export function CategoryManagement() {
                   />
                 </div>
                 <div className="flex flex-col space-y-2">
-                  <Label htmlFor="igst">IGST (%) <span className="text-gray-400">(optional)</span></Label>
+                  <Label htmlFor="igst">
+                    IGST (%) <span className="text-gray-400">(optional)</span>
+                  </Label>
                   <Input
                     id="igst"
                     name="igst"
@@ -450,7 +466,10 @@ export function CategoryManagement() {
                     placeholder="Enter position"
                     value={addFormData.position ?? ""}
                     onChange={(e) =>
-                      setAddFormData({ ...addFormData, position: e.target.value })
+                      setAddFormData({
+                        ...addFormData,
+                        position: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -465,7 +484,28 @@ export function CategoryManagement() {
                     placeholder="Enter platform fee"
                     value={addFormData.platform_fee ?? ""}
                     onChange={(e) =>
-                      setAddFormData({ ...addFormData, platform_fee: e.target.value })
+                      setAddFormData({
+                        ...addFormData,
+                        platform_fee: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <Label htmlFor="commission"> Admin Commission (%)</Label>
+                  <Input
+                    id="commission"
+                    name="commission"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Enter Admin commission"
+                    value={addFormData.commission ?? ""}
+                    onChange={(e) =>
+                      setAddFormData({
+                        ...addFormData,
+                        commission: e.target.value,
+                      })
                     }
                   />
                 </div>
@@ -521,7 +561,8 @@ export function CategoryManagement() {
                 <TableHead>Image</TableHead>
                 <TableHead>SGST</TableHead>
                 <TableHead>CGST</TableHead>
-              
+                <TableHead> Admin Commission</TableHead>
+
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -557,7 +598,8 @@ export function CategoryManagement() {
                   </TableCell>
                   <TableCell>{category.sgst}</TableCell>
                   <TableCell>{category.cgst}</TableCell>
-                 
+                  <TableCell>{category.commission}</TableCell>
+
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -579,56 +621,59 @@ export function CategoryManagement() {
                         <DropdownMenuItem
                           className="text-red-600"
                           onClick={async () => {
-                          if (
-                            confirm(
-                            "Are you sure you want to delete this category?"
-                            )
-                          ) {
-                            try {
-                            const response = await fetch(
-                              `${
-                              import.meta.env.VITE_BASE_UR
-                              }admin/delete-main-category/${category.id}`,
-                              {
-                              method: "DELETE",
-                              headers: {
-                                Authorization: `Bearer ${token}`,
-                              },
-                              }
-                            );
-
-                            if (!response.ok) {
-                              let errorMsg = "Failed to delete category";
-                              try {
-                              const errorData = await response.json();
-                              if (errorData?.message) errorMsg = errorData.message;
-                              } catch {
-                              // ignore JSON parse error
-                              }
-                              throw new Error(errorMsg);
-                            }
-
-                            const data = await response.json();
-                            if (data.success) {
-                              setCategories((prevCategories) =>
-                              prevCategories.filter(
-                                (cat) => cat.id !== category.id
+                            if (
+                              confirm(
+                                "Are you sure you want to delete this category?"
                               )
-                              );
-                              toast.success("Category deleted successfully");
-                            } else {
-                              throw new Error(
-                              data.message || "Failed to delete category"
-                              );
+                            ) {
+                              try {
+                                const response = await fetch(
+                                  `${
+                                    import.meta.env.VITE_BASE_UR
+                                  }admin/delete-main-category/${category.id}`,
+                                  {
+                                    method: "DELETE",
+                                    headers: {
+                                      Authorization: `Bearer ${token}`,
+                                    },
+                                  }
+                                );
+
+                                if (!response.ok) {
+                                  let errorMsg = "Failed to delete category";
+                                  try {
+                                    const errorData = await response.json();
+                                    if (errorData?.message)
+                                      errorMsg = errorData.message;
+                                  } catch {
+                                    // ignore JSON parse error
+                                  }
+                                  throw new Error(errorMsg);
+                                }
+
+                                const data = await response.json();
+                                if (data.success) {
+                                  setCategories((prevCategories) =>
+                                    prevCategories.filter(
+                                      (cat) => cat.id !== category.id
+                                    )
+                                  );
+                                  toast.success(
+                                    "Category deleted successfully"
+                                  );
+                                } else {
+                                  throw new Error(
+                                    data.message || "Failed to delete category"
+                                  );
+                                }
+                              } catch (err) {
+                                toast.error(
+                                  err instanceof Error
+                                    ? err.message
+                                    : "An unknown error occurred"
+                                );
+                              }
                             }
-                            } catch (err) {
-                            toast.error(
-                              err instanceof Error
-                              ? err.message
-                              : "An unknown error occurred"
-                            );
-                            }
-                          }
                           }}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -641,7 +686,10 @@ export function CategoryManagement() {
               ))}
               {filteredCategories.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center font-semibold text-gray-800">
+                  <TableCell
+                    colSpan={8}
+                    className="text-center font-semibold text-gray-800"
+                  >
                     No categories found.
                   </TableCell>
                 </TableRow>
@@ -749,9 +797,30 @@ export function CategoryManagement() {
                 step="0.01"
                 value={editFormData.platform_fee ?? ""}
                 onChange={(e) =>
-                  setEditFormData({ ...editFormData, platform_fee: e.target.value })
+                  setEditFormData({
+                    ...editFormData,
+                    platform_fee: e.target.value,
+                  })
                 }
                 placeholder="Enter platform fee"
+              />
+            </div>
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="edit-commission">Admin Commission (%)</Label>
+              <Input
+                id="edit-commission"
+                name="commission"
+                type="number"
+                min="0"
+                step="0.01"
+                value={editFormData.commission ?? ""}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    commission: e.target.value,
+                  })
+                }
+                placeholder="Enter Admin commission"
               />
             </div>
             <div className="flex flex-col space-y-2 md:col-span-2">
