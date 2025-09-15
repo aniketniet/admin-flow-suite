@@ -1410,12 +1410,15 @@ const ShopingerRegistration = () => {
       {/* Right side with form content - takes full width on mobile, 50% on medium screens and up */}
       <div className="w-full md:w-1/2 p-4 md:p-8 flex flex-col">
         <div className="text-center relative">
+
           <div className="text-center mb-8">
+            <Link to="/">
             <img
               src="logo.png"
               alt="Shopinger Logo"
               className="mx-auto h-12 w-auto mb-2"
             />
+            </Link>
           </div>
           {currentStep > 1 && (
             <button

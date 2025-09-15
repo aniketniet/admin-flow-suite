@@ -21,6 +21,21 @@ const LoginPage = () => {
   const [timer, setTimer] = useState(0); // seconds remaining to resend
   const [detectedRole, setDetectedRole] = useState<string | null>(null);
 
+  // Check for existing tokens and redirect automatically
+  useEffect(() => {
+    const adminToken = Cookies.get("admin_token");
+    const vendorToken = Cookies.get("vendor_token");
+    const userRole = Cookies.get("user_role");
+
+    if (adminToken && userRole === "admin") {
+      toast.success("Welcome back, Admin!");
+      navigate("/dashboard");
+    } else if (vendorToken && userRole === "vendor") {
+      toast.success("Welcome back, Vendor!");
+      navigate("/vendor/dashboard");
+    }
+  }, [navigate]);
+
   // countdown for resend
   useEffect(() => {
     if (timer <= 0) return;
@@ -125,11 +140,13 @@ const LoginPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
+            <Link to="/">
             <img
               src="logo.png"
               alt="Shopinger Logo"
               className="mx-auto h-12 w-auto mb-3"
             />
+            </Link>
             <p className="text-gray-600">Sign in with OTP</p>
           </div>
           <Card>

@@ -1,12 +1,22 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import JoditEditor from "jodit-react";
 
 const UpdateProductManagement = () => {
   const id = useParams().productId;
-
+  const [searchParams] = useSearchParams();
+  
+  // Extract return URL parameters
+  const returnParams = new URLSearchParams();
+  searchParams.forEach((value, key) => {
+    if (key !== 'returnPage') {  // Skip old returnPage if it exists
+      returnParams.set(key, value);
+    }
+  });
+  const returnUrl = returnParams.toString() ? `?${returnParams.toString()}` : "";
+  
   const navigate = useNavigate();
   const [product, setProduct] = useState({
     name: "",
@@ -110,7 +120,9 @@ const UpdateProductManagement = () => {
   const fileInputRef = useRef(null);
 
   const token = Cookies.get("admin_token") || Cookies.get("vendor_token");
-  const isAdmin = Cookies.get("user_role") === "admin";
+  const role = Cookies.get("user_role");
+  const isAdmin = role === "admin";
+  const isVendor = role === "vendor";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -453,9 +465,10 @@ const UpdateProductManagement = () => {
       );
 
       setSuccess(true);
-      // setTimeout(() => {
-      //   navigate(isAdmin ? "/admin/products" : "/vendor/products");
-      // }, 1500);
+      setTimeout(() => {
+        const productsPath = isAdmin ? "/products" : "/vendor/products";
+        navigate(`${productsPath}${returnUrl}`);
+      }, 1500);
     } catch (error) {
       console.error("Error updating product:", error);
     } finally {
@@ -1041,9 +1054,10 @@ const UpdateProductManagement = () => {
                 <div className="flex justify-end">
                   <button
                     type="button"
-                    onClick={() =>
-                      navigate(isAdmin ? "/admin/products" : "/vendor/products")
-                    }
+                    onClick={() => {
+                      const productsPath = isAdmin ? "/products" : "/vendor/products";
+                      navigate(`${productsPath}${returnUrl}`);
+                    }}
                     className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gold-500"
                   >
                     Cancel

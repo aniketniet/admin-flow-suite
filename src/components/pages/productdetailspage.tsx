@@ -1,20 +1,41 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import Cookies from "js-cookie";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { Header } from "../layout/Header";
 import { Sidebar } from "../layout/Sidebar";
 
 const ProductdetailsPage = () => {
   const { productId } = useParams();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // Extract return URL parameters
+  const returnParams = new URLSearchParams();
+  searchParams.forEach((value, key) => {
+    if (key !== 'returnPage') {  // Skip old returnPage if it exists
+      returnParams.set(key, value);
+    }
+  });
+  const returnUrl = returnParams.toString() ? `?${returnParams.toString()}` : "";
+  
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  
   const role = Cookies.get("user_role");
   const isAdmin = role === "admin";
   const isVendor = role === "vendor";
   const token = Cookies.get(isAdmin ? "admin_token" : "vendor_token");
+
+  const handleBackToProducts = () => {
+    const productsPath = isAdmin ? "/products" : "/vendor/products";
+    navigate(`${productsPath}${returnUrl}`);
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -96,15 +117,17 @@ const ProductdetailsPage = () => {
         {/* Main Content */}
         <main className="flex-1 container mx-auto px-6 py-12">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold">Product Details</h1>
-            {/* <button
-              onClick={() =>
-                (window.location.href = `/edit-product/${productId}`)
-              }
-              className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-300"
-            >
-              Edit
-            </button> */}
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline" 
+                onClick={handleBackToProducts}
+                className="flex items-center space-x-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Products</span>
+              </Button>
+              <h1 className="text-2xl font-bold">Product Details</h1>
+            </div>
           </div>
 
           <div className="flex flex-col lg:flex-row">

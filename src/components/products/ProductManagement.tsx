@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   Table,
@@ -69,14 +69,38 @@ interface Product {
 }
 
 export function ProductManagement() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  // URL-based pagination and filters
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+  
+  // Initialize filters from URL or default values
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "all");
+  const [categoryFilter, setCategoryFilter] = useState(searchParams.get("category") || "all");
+  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  
+  // Track if this is the initial load and previous filter values
+  const isInitialLoad = useRef(true);
+  const prevFilters = useRef({ 
+    searchTerm: searchParams.get("search") || "", 
+    statusFilter: searchParams.get("status") || "all", 
+    categoryFilter: searchParams.get("category") || "all" 
+  });
+  const isReturningFromNavigation = useRef(false);
+  const userChangedFilters = useRef(false);
+  
+  // Check if returning from navigation (has returnPage in previous URL)
+  useEffect(() => {
+    const hasReturnPage = searchParams.get('returnPage') !== null;
+    if (hasReturnPage) {
+      isReturningFromNavigation.current = true;
+    }
+  }, []);
+  
   const role = Cookies.get("user_role");
   const isAdmin = role === "admin";
   const isVendor = role === "vendor";
@@ -84,10 +108,14 @@ export function ProductManagement() {
   const navigate = useNavigate();
 
   const handleDetailClick = (productId: number) => {
+    // Store current page and filters in URL before navigating
+    const currentParams = new URLSearchParams(searchParams);
+    const returnUrl = `?${currentParams.toString()}`;
+    
     if (isAdmin) {
-      navigate(`/productdetails/${productId}`);
+      navigate(`/productdetails/${productId}${returnUrl}`);
     } else if (isVendor) {
-      navigate(`/vendor/productdetails/${productId}`);
+      navigate(`/vendor/productdetails/${productId}${returnUrl}`);
     }
   };
 
@@ -102,7 +130,61 @@ export function ProductManagement() {
 
   useEffect(() => {
     fetchProducts();
+    // Mark that initial load is complete after first render
+    setTimeout(() => {
+      isInitialLoad.current = false;
+      isReturningFromNavigation.current = false;
+    }, 100);
   }, []);
+
+  // Filter products based on search and filter criteria
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.vendor.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "in_stock" && product.variants[0].stock > 0) ||
+      (statusFilter === "out_of_stock" && product.variants[0].stock <= 0);
+    const matchesCategory =
+      categoryFilter === "all" || product.mainCategory.name === categoryFilter;
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  // Reset to page 1 when filters change (but not on initial load or returning from navigation)
+  useEffect(() => {
+    const filtersChanged = 
+      prevFilters.current.searchTerm !== searchTerm ||
+      prevFilters.current.statusFilter !== statusFilter ||
+      prevFilters.current.categoryFilter !== categoryFilter;
+    
+    // Only reset to page 1 if:
+    // 1. Not initial load
+    // 2. Not returning from navigation (unless user explicitly changed filters)
+    // 3. Filters actually changed
+    if (!isInitialLoad.current && filtersChanged && 
+        (!isReturningFromNavigation.current || userChangedFilters.current)) {
+      updatePage(1);
+    }
+    
+    // Update previous filters
+    prevFilters.current = { searchTerm, statusFilter, categoryFilter };
+    
+    // Reset flags after processing
+    if (filtersChanged) {
+      userChangedFilters.current = false;
+    }
+  }, [searchTerm, statusFilter, categoryFilter]);
+
+  // Ensure current page is within valid range (only after products are loaded)
+  useEffect(() => {
+    if (!loading && products.length > 0) {
+      const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+      if (totalPages > 0 && currentPage > totalPages) {
+        updatePage(totalPages);
+      }
+    }
+  }, [filteredProducts.length, currentPage, loading, products.length]);
 
   const fetchProducts = async () => {
     try {
@@ -254,19 +336,6 @@ export function ProductManagement() {
     );
   };
 
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.vendor.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "in_stock" && product.variants[0].stock > 0) ||
-      (statusFilter === "out_of_stock" && product.variants[0].stock <= 0);
-    const matchesCategory =
-      categoryFilter === "all" || product.mainCategory.name === categoryFilter;
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
-
   // Get current products
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
@@ -275,21 +344,81 @@ export function ProductManagement() {
     indexOfLastProduct
   );
 
-  // Change page
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
-  const nextPage = () => {
-    if (currentPage < Math.ceil(filteredProducts.length / productsPerPage)) {
-      setCurrentPage(currentPage + 1);
+  // Update URL with all current parameters
+  const updateURLParams = (updates: { page?: number; search?: string; status?: string; category?: string }) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    // Update or remove parameters
+    if (updates.page !== undefined) {
+      newParams.set("page", updates.page.toString());
+    }
+    if (updates.search !== undefined) {
+      if (updates.search === "") {
+        newParams.delete("search");
+      } else {
+        newParams.set("search", updates.search);
+      }
+    }
+    if (updates.status !== undefined) {
+      if (updates.status === "all") {
+        newParams.delete("status");
+      } else {
+        newParams.set("status", updates.status);
+      }
+    }
+    if (updates.category !== undefined) {
+      if (updates.category === "all") {
+        newParams.delete("category");
+      } else {
+        newParams.set("category", updates.category);
+      }
+    }
+    
+    setSearchParams(newParams);
+  };
+  // Change page - update URL parameters
+  const updatePage = (pageNumber: number) => {
+    // Only update if the page actually changes
+    if (pageNumber !== currentPage) {
+      updateURLParams({ page: pageNumber });
     }
   };
+  
+  const paginate = (pageNumber: number) => updatePage(pageNumber);
+  
+  const nextPage = () => {
+    if (currentPage < Math.ceil(filteredProducts.length / productsPerPage)) {
+      updatePage(currentPage + 1);
+    }
+  };
+  
   const prevPage = () => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      updatePage(currentPage - 1);
     }
   };
 
   const categories = [...new Set(products.map((p) => p.mainCategory.name))];
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+  // Custom filter handlers that mark user interaction and update URL
+  const handleSearchChange = (value: string) => {
+    userChangedFilters.current = true;
+    setSearchTerm(value);
+    updateURLParams({ search: value, page: 1 });
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    userChangedFilters.current = true;
+    setStatusFilter(value);
+    updateURLParams({ status: value, page: 1 });
+  };
+
+  const handleCategoryFilterChange = (value: string) => {
+    userChangedFilters.current = true;
+    setCategoryFilter(value);
+    updateURLParams({ category: value, page: 1 });
+  };
 
   if (loading) {
     return <div>Loading products...</div>;
@@ -309,7 +438,7 @@ export function ProductManagement() {
             <Input
               placeholder="Search products..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="w-64 pl-10"
             />
           </div>
@@ -326,13 +455,13 @@ export function ProductManagement() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+              <DropdownMenuItem onClick={() => handleStatusFilterChange("all")}>
                 All
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("in_stock")}>
+              <DropdownMenuItem onClick={() => handleStatusFilterChange("in_stock")}>
                 In Stock
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter("out_of_stock")}>
+              <DropdownMenuItem onClick={() => handleStatusFilterChange("out_of_stock")}>
                 Out of Stock
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -345,13 +474,13 @@ export function ProductManagement() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => setCategoryFilter("all")}>
+              <DropdownMenuItem onClick={() => handleCategoryFilterChange("all")}>
                 All
               </DropdownMenuItem>
               {categories.map((category) => (
                 <DropdownMenuItem
                   key={category}
-                  onClick={() => setCategoryFilter(category)}
+                  onClick={() => handleCategoryFilterChange(category)}
                 >
                   {category}
                 </DropdownMenuItem>
@@ -490,13 +619,16 @@ export function ProductManagement() {
                           View Product
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
+                          onClick={() => {
+                            // Store current page and filters before navigating to edit
+                            const currentParams = new URLSearchParams(searchParams);
+                            const returnUrl = `?${currentParams.toString()}`;
                             navigate(
                               isAdmin
-                                ? `/product-update/${product.id}`
-                                : `/vendor/product-update/${product.id}`
-                            )
-                          }
+                                ? `/product-update/${product.id}${returnUrl}`
+                                : `/vendor/product-update/${product.id}${returnUrl}`
+                            );
+                          }}
                         >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
