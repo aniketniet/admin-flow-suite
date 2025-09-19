@@ -123,7 +123,14 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [formData.email, formData.phone, formData.password, onNext, setError, setIsLoading]);
+  }, [
+    formData.email,
+    formData.phone,
+    formData.password,
+    onNext,
+    setError,
+    setIsLoading,
+  ]);
 
   // Submit on Enter key
   useEffect(() => {
@@ -135,7 +142,13 @@ const EmailPhoneStep: React.FC<EmailPhoneStepProps> = ({
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [formData.email, formData.phone, formData.password, isLoading, handleSubmit]);
+  }, [
+    formData.email,
+    formData.phone,
+    formData.password,
+    isLoading,
+    handleSubmit,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -339,13 +352,13 @@ const OtpVerificationStep = ({
   // Submit on Enter key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         if (!isLoading) handleSubmit();
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [formData.otp, isLoading, handleSubmit]);
 
   return (
@@ -439,7 +452,10 @@ const GstDetailsStep = ({
       return;
     }
 
-    if (hasGst && (!formData.gstinNumber || formData.gstinNumber.length !== 15)) {
+    if (
+      hasGst &&
+      (!formData.gstinNumber || formData.gstinNumber.length !== 15)
+    ) {
       setError("Please enter a valid 15-digit GSTIN number");
       return;
     }
@@ -455,13 +471,13 @@ const GstDetailsStep = ({
   // Enter key support
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         handleSubmit();
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
   }, [hasGst, formData.gstinNumber, formData.eidNumber, handleSubmit]);
 
   return (
@@ -472,21 +488,35 @@ const GstDetailsStep = ({
       </div>
 
       <div className="mb-6">
-        <h3 className="text-lg font-medium text-gray-800 mb-3">Do you have a GST number?</h3>
+        <h3 className="text-lg font-medium text-gray-800 mb-3">
+          Do you have a GST number?
+        </h3>
         <div className="flex space-x-4">
           <button
             onClick={() => setHasGst(true)}
-            className={`flex-1 py-3 px-4 rounded-md border ${hasGst === true ? 'border-[#FF710B] bg-[#FF710B]/10' : 'border-gray-300'}`}
+            className={`flex-1 py-3 px-4 rounded-md border ${
+              hasGst === true
+                ? "border-[#FF710B] bg-[#FF710B]/10"
+                : "border-gray-300"
+            }`}
           >
             <span className="font-medium">Yes</span>
-            <p className="text-sm text-gray-500 mt-1">Enter your GSTIN and sell anywhere easily</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Enter your GSTIN and sell anywhere easily
+            </p>
           </button>
           <button
             onClick={() => setHasGst(false)}
-            className={`flex-1 py-3 px-4 rounded-md border ${hasGst === false ? 'border-[#FF710B] bg-[#FF710B]/10' : 'border-gray-300'}`}
+            className={`flex-1 py-3 px-4 rounded-md border ${
+              hasGst === false
+                ? "border-[#FF710B] bg-[#FF710B]/10"
+                : "border-gray-300"
+            }`}
           >
             <span className="font-medium">No</span>
-            <p className="text-sm text-gray-500 mt-1">Worry not, you can sell without GST</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Worry not, you can sell without GST
+            </p>
           </button>
         </div>
       </div>
@@ -522,27 +552,40 @@ const GstDetailsStep = ({
       {hasGst === false && (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-medium text-gray-800 mb-2">Get EID in minutes & sell in your registered state</h3>
-            
+            <h3 className="text-lg font-medium text-gray-800 mb-2">
+              Get EID in minutes & sell in your registered state
+            </h3>
+
             <div className="mb-4">
               <h4 className="font-medium mb-1">1. Apply for Enrolment ID</h4>
-              <p className="text-sm text-gray-600 mb-2">from the GST website (only PAN required)</p>
-              <a 
-                href="https://www.youtube.com/watch?v=ntchODi3zQE" 
-                target="_blank" 
+              <p className="text-sm text-gray-600 mb-2">
+                from the GST website (only PAN required)
+              </p>
+              <a
+                href="https://www.youtube.com/watch?v=ntchODi3zQE"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#FF710B] text-sm flex items-center"
               >
-                <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M23.498 6.186a2.997 2.997 0 0 0-2.115-2.115C19.215 3.5 12 3.5 12 3.5s-7.215 0-9.383.571A2.997 2.997 0 0 0 .502 6.186C0 8.354 0 12 0 12s0 3.646.502 5.814a2.997 2.997 0 0 0 2.115 2.115C4.785 20.5 12 20.5 12 20.5s7.215 0 9.383-.571a2.997 2.997 0 0 0 2.115-2.115C24 15.646 24 12 24 12s0-3.646-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                <svg
+                  className="w-4 h-4 mr-1"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M23.498 6.186a2.997 2.997 0 0 0-2.115-2.115C19.215 3.5 12 3.5 12 3.5s-7.215 0-9.383.571A2.997 2.997 0 0 0 .502 6.186C0 8.354 0 12 0 12s0 3.646.502 5.814a2.997 2.997 0 0 0 2.115 2.115C4.785 20.5 12 20.5 12 20.5s7.215 0 9.383-.571a2.997 2.997 0 0 0 2.115-2.115C24 15.646 24 12 24 12s0-3.646-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                 </svg>
                 Watch this video to learn more
               </a>
             </div>
 
             <div>
-              <h4 className="font-medium mb-1">2. Enter Enrolment ID here to complete account setup</h4>
-              <p className="text-sm text-gray-600 mb-2">Once your ID is created, copy and paste it here to complete your setup</p>
+              <h4 className="font-medium mb-1">
+                2. Enter Enrolment ID here to complete account setup
+              </h4>
+              <p className="text-sm text-gray-600 mb-2">
+                Once your ID is created, copy and paste it here to complete your
+                setup
+              </p>
               <div className="flex space-x-2">
                 <input
                   type="text"
@@ -551,19 +594,20 @@ const GstDetailsStep = ({
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
                   placeholder="Enter Enrolment ID / UIN"
                 />
-               
               </div>
             </div>
           </div>
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h4 className="font-medium text-yellow-800 mb-2">Important tips to create Enrolment ID</h4>
+            <h4 className="font-medium text-yellow-800 mb-2">
+              Important tips to create Enrolment ID
+            </h4>
             <p className="text-sm text-yellow-700">
               1. Return to the Shopinger page and paste the EID to verify
             </p>
-            <a 
-              href="https://reg.gst.gov.in/registration/generateuid" 
-              target="_blank" 
+            <a
+              href="https://reg.gst.gov.in/registration/generateuid"
+              target="_blank"
               rel="noopener noreferrer"
               className="text-[#FF710B] text-sm mt-2 inline-block underline"
             >
@@ -579,7 +623,11 @@ const GstDetailsStep = ({
 
       <button
         onClick={handleSubmit}
-        disabled={isLoading || (hasGst === true && !formData.gstinNumber) || (hasGst === false && !formData.eidNumber)}
+        disabled={
+          isLoading ||
+          (hasGst === true && !formData.gstinNumber) ||
+          (hasGst === false && !formData.eidNumber)
+        }
         className="w-full bg-[#FF710B] text-white py-3 px-4 rounded-md hover:bg-[#e65f00] disabled:opacity-50 font-medium mt-6"
       >
         Continue
@@ -604,41 +652,45 @@ const PickupAddressStep = ({
   const [states, setStates] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(true);
   const [loadingStates, setLoadingStates] = useState(false);
+  const [pincodeLoading, setPincodeLoading] = useState(false);
 
-  const fetchStates = useCallback(async (countryName) => {
-    if (!countryName) {
-      setStates([]);
-      return;
-    }
-
-    setLoadingStates(true);
-    try {
-      const response = await fetch(
-        "https://countriesnow.space/api/v0.1/countries/states"
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch states");
+  const fetchStates = useCallback(
+    async (countryName) => {
+      if (!countryName) {
+        setStates([]);
+        return;
       }
 
-      const data = await response.json();
+      setLoadingStates(true);
+      try {
+        const response = await fetch(
+          "https://countriesnow.space/api/v0.1/countries/states"
+        );
 
-      if (data.error === false) {
-        const country = data.data.find((c) => c.name === countryName);
-        if (country) {
-          setStates(country.states || []);
-        } else {
-          setStates([]);
+        if (!response.ok) {
+          throw new Error("Failed to fetch states");
         }
+
+        const data = await response.json();
+
+        if (data.error === false) {
+          const country = data.data.find((c) => c.name === countryName);
+          if (country) {
+            setStates(country.states || []);
+          } else {
+            setStates([]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching states:", error);
+        setError("Failed to load states. Please try again.");
+        setStates([]);
+      } finally {
+        setLoadingStates(false);
       }
-    } catch (error) {
-      console.error("Error fetching states:", error);
-      setError("Failed to load states. Please try again.");
-      setStates([]);
-    } finally {
-      setLoadingStates(false);
-    }
-  }, [setError]);
+    },
+    [setError]
+  );
 
   useEffect(() => {
     const fetchCountries = async () => {
@@ -660,11 +712,11 @@ const PickupAddressStep = ({
           // Set default country if not already set
           if (!formData.country) {
             const defaultCountry =
-              data.data.find((c) => c.name === "") || data.data[0];
+              data.data.find((c) => c.name === "India") || data.data[0];
             if (defaultCountry) {
-              updateFormData("country", defaultCountry.name);
-              // Fetch states for default country
-              fetchStates(defaultCountry.name);
+              updateFormData("country", "India");
+              // Fetch states for India
+              fetchStates("India");
             }
           }
         }
@@ -697,20 +749,56 @@ const PickupAddressStep = ({
     fetchStates(countryName);
   };
 
+  const handlePincodeChange = async (e) => {
+    const pincode = e.target.value;
+    updateFormData("pincode", pincode);
+    
+    // Clear previous error
+    setError("");
+    
+    // If pincode is 6 digits, fetch location data
+
+    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+      setPincodeLoading(true);
+      try {
+        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        const data = await response.json();
+        
+        if (data && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
+          // Use the first post office data to auto-fill fields
+          const postOffice = data[0].PostOffice[0];
+          
+          // Set country to India (not changeable as per requirement)
+          updateFormData("country", "India");
+          
+          // Auto-fill state and city/district
+          updateFormData("state", postOffice.State);
+          updateFormData("city", postOffice.District);
+          
+          // Fetch states for India to populate the dropdown
+          fetchStates("India");
+        } else {
+          setError("Invalid PIN code or no data found");
+        }
+      } catch (error) {
+        console.error("Error fetching pincode data:", error);
+        setError("Failed to fetch location data. Please enter state and city manually.");
+      } finally {
+        setPincodeLoading(false);
+      }
+    }
+  };
+  
   const handleSubmit = useCallback(() => {
-       if (!formData.pickupLocation) {
+    if (!formData.pickupLocation) {
       setError("Please fill in your pickup location");
       return;
     }
-  
-    if (formData.pincode.length !== 6) {
+
+    if (!formData.pincode || formData.pincode.length !== 6) {
       setError("Please enter a valid 6-digit PIN code");
       return;
     }
-    // if (!formData.gstinNumber || !formData.eidNumber) {
-    //   setError("Please fill in your GSTIN and EID numbers");
-    //   return;
-    // }
     if (!formData.plot_no) {
       setError("Please fill in your plot number");
       return;
@@ -730,31 +818,41 @@ const PickupAddressStep = ({
       return;
     }
 
-    // if (formData.gstinNumber.length !== 15) {
-    //   setError("Please enter a valid 15-digit GSTIN number");
-    //   return;
-    // }
-
     if (formData.plot_no.length === 0) {
       setError("Please fill in your plot number");
       return;
     }
-    
 
     onNext();
-  }, [formData.pickupLocation, formData.pincode, formData.plot_no, formData.city, formData.state, formData.country, onNext, setError]);
+  }, [
+    formData.pickupLocation,
+    formData.pincode,
+    formData.plot_no,
+    formData.city,
+    formData.state,
+    formData.country,
+    onNext,
+    setError,
+  ]);
 
   // Enter key support
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         handleSubmit();
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [formData.pickupLocation, formData.plot_no, formData.city, formData.state, formData.pincode, handleSubmit]);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [
+    formData.pickupLocation,
+    formData.plot_no,
+    formData.city,
+    formData.state,
+    formData.pincode,
+    handleSubmit,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -843,28 +941,42 @@ const PickupAddressStep = ({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Country
+            PIN Code
           </label>
-          {loadingCountries ? (
-            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 animate-pulse">
-              Loading countries...
-            </div>
-          ) : (
-            <select
-              value={formData.country}
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.pincode || ""}
               required
-              onChange={(e) => handleCountryChange(e.target.value)}
+              onChange={handlePincodeChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-            >
-              <option value="">Select Country</option>
-              {countries.map((country) => (
-                <option key={country.name} value={country.name}>
-                  {country.name}
-                </option>
-              ))}
-            </select>
-          )}
+              placeholder="6-digit PIN code"
+              maxLength={6}
+            />
+            {pincodeLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-t-2 border-pink-500 border-solid rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            City/District
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.city || ""}
+            onChange={(e) => updateFormData("city", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="City"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             State
@@ -875,10 +987,10 @@ const PickupAddressStep = ({
             </div>
           ) : (
             <select
-              value={formData.state}
+              value={formData.state || ""}
               required
               onChange={(e) => updateFormData("state", e.target.value)}
-              disabled={!formData.country || loadingStates}
+              disabled={loadingStates}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100"
             >
               <option value="">Select State</option>
@@ -890,35 +1002,18 @@ const PickupAddressStep = ({
             </select>
           )}
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            City
+            Country
           </label>
-          <input
-            type="text"
+          <select
+            value="India"
             required
-            value={formData.city}
-            onChange={(e) => updateFormData("city", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-            placeholder="City"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            PIN Code
-          </label>
-          <input
-            type="text"
-            value={formData.pincode}
-            required
-            onChange={(e) => updateFormData("pincode", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-            placeholder="6-digit PIN code"
-            maxLength={6}
-          />
+            disabled
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 bg-gray-100"
+          >
+            <option value="India">India</option>
+          </select>
         </div>
       </div>
 
@@ -934,10 +1029,10 @@ const PickupAddressStep = ({
 
       <button
         onClick={handleSubmit}
-        disabled={isLoading || loadingCountries}
+        disabled={isLoading || loadingCountries || pincodeLoading}
         className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
       >
-        {isLoading ? "Processing..." : "Continue"}
+        {isLoading || pincodeLoading ? "Processing..." : "Continue"}
       </button>
     </div>
   );
@@ -951,7 +1046,6 @@ const BankDetailsStep = ({
   isLoading,
   setError,
 }) => {
-
   const handleSubmit = useCallback(() => {
     if (
       !formData.accountNumber ||
@@ -966,19 +1060,31 @@ const BankDetailsStep = ({
       return;
     }
     onNext();
-  }, [formData.accountNumber, formData.confirmAccountNumber, formData.ifscCode, onNext, setError]);
+  }, [
+    formData.accountNumber,
+    formData.confirmAccountNumber,
+    formData.ifscCode,
+    onNext,
+    setError,
+  ]);
 
   // Enter key support
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         handleSubmit();
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [formData.accountNumber, formData.confirmAccountNumber, formData.ifscCode, isLoading, handleSubmit]);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [
+    formData.accountNumber,
+    formData.confirmAccountNumber,
+    formData.ifscCode,
+    isLoading,
+    handleSubmit,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -1071,6 +1177,89 @@ const SupplierDetailsStep = ({
   setIsLoading,
   setError,
 }) => {
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [states, setStates] = useState([]);
+
+  const fetchStates = useCallback(async () => {
+    try {
+      const response = await fetch(
+        "https://countriesnow.space/api/v0.1/countries/states"
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch states");
+      }
+
+      const data = await response.json();
+
+      if (data.error === false) {
+        const country = data.data.find((c) => c.name === "India");
+        if (country) {
+          setStates(country.states || []);
+        } else {
+          setStates([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching states:", error);
+      setStates([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStates();
+  }, [fetchStates]);
+
+  const handlePincodeChange = async (e) => {
+    const pincode = e.target.value;
+    updateFormData("pincode", pincode);
+    
+    // Clear previous error
+    setError("");
+    
+    // If pincode is 6 digits, fetch location data
+    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
+      setPincodeLoading(true);
+      try {
+        // Using a CORS proxy to avoid CORS issues
+        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        const targetUrl = `http://www.postalpincode.in/api/pincode/${pincode}`;
+        const response = await fetch(proxyUrl + targetUrl);
+        const data = await response.json();
+        
+        if (data && data.Status === "Success" && data.PostOffice && data.PostOffice.length > 0) {
+          // Use the first post office data to auto-fill fields
+          const postOffice = data.PostOffice[0];
+          
+          // Auto-fill state and city/district
+          updateFormData("state", postOffice.State);
+          updateFormData("city", postOffice.District);
+        } else {
+          setError("Invalid PIN code or no data found");
+        }
+      } catch (error) {
+        console.error("Error fetching pincode data:", error);
+        // Fallback: Try without CORS proxy
+        try {
+          const response = await fetch(`http://www.postalpincode.in/api/pincode/${pincode}`);
+          const data = await response.json();
+          
+          if (data && data.Status === "Success" && data.PostOffice && data.PostOffice.length > 0) {
+            const postOffice = data.PostOffice[0];
+            updateFormData("state", postOffice.State);
+            updateFormData("city", postOffice.District);
+          } else {
+            setError("Invalid PIN code or no data found");
+          }
+        } catch (fallbackError) {
+          setError("Failed to fetch location data. Please enter state and city manually.");
+        }
+      } finally {
+        setPincodeLoading(false);
+      }
+    }
+  };
+
   const handleSubmit = useCallback(async () => {
     if (!formData.businessName || !formData.supplierName) {
       setError("Please fill in your business and supplier name");
@@ -1081,15 +1270,10 @@ const SupplierDetailsStep = ({
       return;
     }
 
-    if (formData.pincode.length !== 6) {
+    if (!formData.pincode || formData.pincode.length !== 6) {
       setError("Please enter a valid 6-digit PIN code");
       return;
     }
-
-    // if (!formData.gstinNumber || !formData.eidNumber) {
-    //   setError("Please fill in your GSTIN and EID numbers");
-    //   return;
-    // }
 
     if (!formData.plot_no) {
       setError("Please fill in your plot number");
@@ -1124,7 +1308,7 @@ const SupplierDetailsStep = ({
             area: formData.area || "",
             city: formData.city,
             state: formData.state,
-            country: formData.country || "",
+            country: "India",
             pin_code: formData.pincode,
             gst_no: formData.gstinNumber,
             eid_no: formData.eidNumber || "",
@@ -1160,19 +1344,46 @@ const SupplierDetailsStep = ({
     } finally {
       setIsLoading(false);
     }
-  }, [formData.businessName, formData.supplierName, formData.city, formData.state, formData.pincode, formData.plot_no, formData.building, formData.street, formData.area, formData.country, formData.pickupLocation, formData.gstinNumber, formData.eidNumber, formData.bankName, formData.accountNumber, formData.ifscCode, setError, setIsLoading]);
+  }, [
+    formData.businessName,
+    formData.supplierName,
+    formData.city,
+    formData.state,
+    formData.pincode,
+    formData.plot_no,
+    formData.building,
+    formData.street,
+    formData.area,
+    formData.pickupLocation,
+    formData.gstinNumber,
+    formData.eidNumber,
+    formData.bankName,
+    formData.accountNumber,
+    formData.ifscCode,
+    setError,
+    setIsLoading,
+  ]);
 
   // Enter key support
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         e.preventDefault();
         if (!isLoading) handleSubmit();
       }
     };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [formData.businessName, formData.supplierName, formData.plot_no, formData.city, formData.state, formData.pincode, isLoading, handleSubmit]);
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [
+    formData.businessName,
+    formData.supplierName,
+    formData.plot_no,
+    formData.city,
+    formData.state,
+    formData.pincode,
+    isLoading,
+    handleSubmit,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -1216,12 +1427,84 @@ const SupplierDetailsStep = ({
         />
       </div>
 
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            PIN Code
+          </label>
+          <div className="relative">
+            <input
+              type="text"
+              value={formData.pincode || ""}
+              required
+              onChange={handlePincodeChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+              placeholder="6-digit PIN code"
+              maxLength={6}
+            />
+            {pincodeLoading && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-t-2 border-pink-500 border-solid rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            City/District
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.city || ""}
+            onChange={(e) => updateFormData("city", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+            placeholder="City"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            State
+          </label>
+          <select
+            value={formData.state || ""}
+            required
+            onChange={(e) => updateFormData("state", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+          >
+            <option value="">Select State</option>
+            {states.map((state) => (
+              <option key={state.name} value={state.name}>
+                {state.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Country
+          </label>
+          <select
+            value="India"
+            required
+            disabled
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 bg-gray-100"
+          >
+            <option value="India">India</option>
+          </select>
+        </div>
+      </div>
+
       <button
         onClick={handleSubmit}
-        disabled={isLoading}
+        disabled={isLoading || pincodeLoading}
         className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
       >
-        {isLoading ? "Submitting..." : "Complete Registration"}
+        {isLoading || pincodeLoading ? "Submitting..." : "Complete Registration"}
       </button>
     </div>
   );
@@ -1380,7 +1663,7 @@ const ShopingerRegistration = () => {
 
     switch (currentStep) {
       case 1:
-  return <EmailPhoneStep {...commonProps} error={error} />;
+        return <EmailPhoneStep {...commonProps} error={error} />;
       case 2:
         return <OtpVerificationStep {...commonProps} vendorId={vendorId} />;
       case 3:
@@ -1410,14 +1693,13 @@ const ShopingerRegistration = () => {
       {/* Right side with form content - takes full width on mobile, 50% on medium screens and up */}
       <div className="w-full md:w-1/2 p-4 md:p-8 flex flex-col">
         <div className="text-center relative">
-
           <div className="text-center mb-8">
             <Link to="/">
-            <img
-              src="logo.png"
-              alt="Shopinger Logo"
-              className="mx-auto h-12 w-auto mb-2"
-            />
+              <img
+                src="logo.png"
+                alt="Shopinger Logo"
+                className="mx-auto h-12 w-auto mb-2"
+              />
             </Link>
           </div>
           {currentStep > 1 && (
