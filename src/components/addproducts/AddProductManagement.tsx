@@ -3,11 +3,159 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { toast } from "sonner";
 import JoditEditor from "jodit-react";
+// Add these imports for drag and drop functionality
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Define types for our product state
+interface Attribute {
+  key: string;
+  value: string;
+}
+
+interface Category {
+  id: number;
+  name: string;
+  sgst?: number;
+  cgst?: number;
+  subCategories?: SubCategory[];
+}
+
+interface SubCategory {
+  id: number;
+  name: string;
+  subSubCategories?: SubSubCategory[];
+}
+
+interface SubSubCategory {
+  id: number;
+  name: string;
+}
+
+interface Vendor {
+  id: number;
+  name: string;
+}
+
+interface Variant {
+  sku: string;
+  price: string;
+  stock: string;
+  originalPrice: string;
+  sellingprice: string;
+  attributes: Attribute[];
+  images: File[];
+  sgst?: string;
+  cgst?: string;
+  isManualEdit?: boolean;
+  height?: string;
+  weight?: string;
+}
+
+interface ProductState {
+  name: string;
+  description: string;
+  keywords: string;
+  mainCategoryId: string;
+  subCategoryId: string;
+  subSubCategoryId: string;
+  vendorId: string;
+  variants: Variant[];
+}
+
+interface Keyword {
+  id: string;
+  text: string;
+}
+
+// Jodit configuration type
+interface JoditConfig {
+  readonly: boolean;
+  toolbar: boolean;
+  spellcheck: boolean;
+  language: string;
+  height: number;
+  toolbarButtonSize: "small" | "middle" | "large" | "tiny" | "xsmall";
+  showCharsCounter: boolean;
+  showWordsCounter: boolean;
+  showXPathInStatusbar: boolean;
+  clipboard: {
+    defaultActionOnPaste: string;
+    formaters: Array<Record<string, unknown>>;
+    allowNativePaste: boolean;
+    askBeforePasteFromWord: boolean;
+    askBeforePasteHTML: boolean;
+  };
+  cleanHTML: object | boolean;
+  buttons: string[];
+  [key: string]: unknown; // Allow additional properties
+}
+
+// Create a sortable item component for images
+const SortableImageItem = ({ id, image, index, onRemove }: { id: number; image: File; index: number; onRemove: (index: number) => void }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className="relative group"
+    >
+      <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded">
+        <div 
+          {...attributes} 
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-1"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <img
+          src={URL.createObjectURL(image)}
+          alt={`Preview ${index}`}
+          className="h-16 w-16 object-cover rounded"
+        />
+        <button
+          type="button"
+          onClick={() => onRemove(index)}
+          className="text-red-500 hover:text-red-700"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const AddProductManagement = () => {
-  const [product, setProduct] = useState({
+  const [product, setProduct] = useState<ProductState>({
     name: "",
     description: "",
+    keywords: "",
     mainCategoryId: "",
     subCategoryId: "",
     subSubCategoryId: "",
@@ -20,15 +168,18 @@ const AddProductManagement = () => {
         originalPrice: "",
         sellingprice: "",
         attributes: [{ key: "Size", value: "" }],
+        images: [],
       },
     ],
   });
 
+  const [keywords, setKeywords] = useState<Keyword[]>([]);
+  const keywordsInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useRef(null);
 
   // Jodit configuration
-
-  const joditConfig = {
+  const joditConfig: Record<string, unknown> = {
     readonly: false,
     toolbar: true,
     spellcheck: true,
@@ -96,22 +247,29 @@ const AddProductManagement = () => {
     ],
   };
 
-  const [images, setImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [mainCategories, setMainCategories] = useState([]);
-  const [subCategories, setSubCategories] = useState([]);
-  const [subSubCategories, setSubSubCategories] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  const [mainCategories, setMainCategories] = useState<Category[]>([]);
+  const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
+  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const role = Cookies.get("user_role");
-  const vendorId = JSON.parse(Cookies.get("user_data"))?.id;
+  const vendorId = JSON.parse(Cookies.get("user_data") || "{}")?.id;
 
   const isAdmin = role === "admin";
   const isVendor = role === "vendor";
 
   const token = Cookies.get("admin_token");
+
+  // Add state for drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     const fetchData = async () => {
@@ -150,7 +308,6 @@ const AddProductManagement = () => {
   }, []);
 
   // calculate sgst and cgst to original price and fill in selling price and price
-
   // console.log("mainCategories", mainCategories);
 
   useEffect(() => {
@@ -182,7 +339,7 @@ const AddProductManagement = () => {
           cgst,
           sellingprice,
           price: totalPrice, // Always keep price updated (for reference)
-        };
+        } as Variant;
       });
 
       const isChanged = updatedVariants.some(
@@ -228,12 +385,12 @@ const AddProductManagement = () => {
     }
   }, [product.subCategoryId, subCategories]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleVariantChange = (variantIndex, e) => {
+  const handleVariantChange = (variantIndex: number, e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setProduct((prev) => {
       const updatedVariants = [...prev.variants];
@@ -244,7 +401,7 @@ const AddProductManagement = () => {
           ...updatedVariants[variantIndex],
           [name]: value,
           isManualEdit: true, // Mark as manually edited
-        };
+        } as Variant;
       } else {
         // For other fields, reset isManualEdit if originalPrice changes
         updatedVariants[variantIndex] = {
@@ -254,17 +411,17 @@ const AddProductManagement = () => {
             name === "originalPrice"
               ? false
               : updatedVariants[variantIndex].isManualEdit,
-        };
+        } as Variant;
       }
 
       return { ...prev, variants: updatedVariants };
     });
   };
 
-  const handleAttributeChange = (variantIndex, attrIndex, e) => {
+  const handleAttributeChange = (variantIndex: number, attrIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const updatedVariants = [...product.variants];
-    updatedVariants[variantIndex].attributes[attrIndex][name] = value;
+    updatedVariants[variantIndex].attributes[attrIndex][name as keyof Attribute] = value;
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
@@ -280,24 +437,25 @@ const AddProductManagement = () => {
           originalPrice: "",
           sellingprice: "",
           attributes: [{ key: "size", value: "" }],
+          images: [],
         },
       ],
     }));
   };
 
-  const addAttribute = (variantIndex) => {
+  const addAttribute = (variantIndex: number) => {
     const updatedVariants = [...product.variants];
     updatedVariants[variantIndex].attributes.push({ key: "", value: "" });
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
-  const removeVariant = (index) => {
+  const removeVariant = (index: number) => {
     if (product.variants.length <= 1) return;
     const updatedVariants = product.variants.filter((_, i) => i !== index);
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
-  const removeAttribute = (variantIndex, attrIndex) => {
+  const removeAttribute = (variantIndex: number, attrIndex: number) => {
     const updatedVariants = [...product.variants];
     if (updatedVariants[variantIndex].attributes.length <= 0) return;
     updatedVariants[variantIndex].attributes = updatedVariants[
@@ -306,15 +464,56 @@ const AddProductManagement = () => {
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
-  const handleImageChange = (e) => {
-    setImages([...e.target.files]);
+  // Handle variant image change
+  const handleVariantImageChange = (variantIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setProduct((prev) => {
+      const updatedVariants = [...prev.variants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        images: [...updatedVariants[variantIndex].images, ...files],
+      } as Variant;
+      return { ...prev, variants: updatedVariants };
+    });
+  };
+
+  // Remove variant image
+  const removeVariantImage = (variantIndex: number, imageIndex: number) => {
+    setProduct((prev) => {
+      const updatedVariants = [...prev.variants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        images: updatedVariants[variantIndex].images.filter((_, i) => i !== imageIndex),
+      } as Variant;
+      return { ...prev, variants: updatedVariants };
+    });
+  };
+
+  // Handle drag end for variant images
+  const handleDragEnd = (variantIndex: number, event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setProduct((prev) => {
+        const updatedVariants = [...prev.variants];
+        const oldIndex = active.id as number;
+        const newIndex = over.id as number;
+        
+        updatedVariants[variantIndex] = {
+          ...updatedVariants[variantIndex],
+          images: arrayMove(updatedVariants[variantIndex].images, oldIndex, newIndex),
+        } as Variant;
+        
+        return { ...prev, variants: updatedVariants };
+      });
+    }
   };
 
   const triggerFileInput = () => {
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setSuccess(false);
@@ -323,25 +522,41 @@ const AddProductManagement = () => {
       const formData = new FormData();
       formData.append("name", product.name);
       formData.append("description", product.description);
+      formData.append("keywords", keywords.map(k => k.text).join(', ')); // Add keywords to form data
       formData.append("mainCategoryId", product.mainCategoryId);
       formData.append("subCategoryId", product.subCategoryId);
       formData.append("subSubCategoryId", product.subSubCategoryId);
       formData.append("vendorId", isAdmin ? product.vendorId : vendorId);
-      formData.append("variants", JSON.stringify(product.variants));
+      
+      // Add height, weight and attributes to variants
+      const variantsWithAdditionalData = product.variants.map(variant => ({
+        ...variant,
+        height: "10cm", // Default values, you may want to make these editable
+        weight: "500g",
+      }));
+      
+      formData.append("variants", JSON.stringify(variantsWithAdditionalData));
 
-      images.forEach((image) => {
-        formData.append(`images_0`, image);
+      // Append images for each variant
+      product.variants.forEach((variant, variantIndex) => {
+        variant.images.forEach((image, imageIndex) => {
+          formData.append(`images_${variantIndex}`, image);
+        });
       });
 
-      for (let i = 0; i < images.length; i++) {
-        if (images[i].size > 5 * 1024 * 1024) {
-          toast.error(`Image "${images[i].name}" exceeds 5MB size limit.`);
-          setIsLoading(false);
-          return;
+      // Validate image sizes
+      for (let i = 0; i < product.variants.length; i++) {
+        const variant = product.variants[i];
+        for (let j = 0; j < variant.images.length; j++) {
+          if (variant.images[j].size > 5 * 1024 * 1024) {
+            toast.error(`Variant ${i + 1} Image "${variant.images[j].name}" exceeds 5MB size limit.`);
+            setIsLoading(false);
+            return;
+          }
         }
       }
 
-      const token = isVendor
+      const userToken = isVendor
         ? Cookies.get("vendor_token")
         : Cookies.get("admin_token");
       const apiUrl = isVendor
@@ -363,6 +578,7 @@ const AddProductManagement = () => {
       setProduct({
         name: "",
         description: "",
+        keywords: "",
         mainCategoryId: "",
         subCategoryId: "",
         subSubCategoryId: "",
@@ -375,10 +591,11 @@ const AddProductManagement = () => {
             sellingprice: "",
             originalPrice: "",
             attributes: [{ key: "size", value: "" }],
+            images: [],
           },
         ],
       });
-      setImages([]);
+      setKeywords([]); // Reset keywords
     } catch (error) {
       let message = "Error adding product.";
       if (axios.isAxiosError(error)) {
@@ -395,6 +612,26 @@ const AddProductManagement = () => {
     }
   };
 
+  const handleKeywordsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProduct((prev) => ({ ...prev, keywords: e.target.value }));
+  };
+
+  const handleKeywordsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && product.keywords.trim() !== '') {
+      e.preventDefault();
+      const newKeyword = {
+        id: Date.now().toString(),
+        text: product.keywords.trim()
+      };
+      setKeywords(prev => [...prev, newKeyword]);
+      setProduct((prev) => ({ ...prev, keywords: "" }));
+    }
+  };
+
+  const removeKeyword = (id: string) => {
+    setKeywords(prev => prev.filter(keyword => keyword.id !== id));
+  };
+
   if (loadingCategories) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -404,7 +641,7 @@ const AddProductManagement = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 ">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-5xl mx-auto">
         <div className="bg-white shadow-xl rounded-lg overflow-hidden">
           <div className="p-8 border-b border-gray-200">
@@ -453,8 +690,7 @@ const AddProductManagement = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   />
                 </div>
-
-                <div>
+                 <div>
                   <label
                     htmlFor="mainCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -477,9 +713,12 @@ const AddProductManagement = () => {
                     ))}
                   </select>
                 </div>
+
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+               
+
                 <div>
                   <label
                     htmlFor="subCategoryId"
@@ -504,8 +743,7 @@ const AddProductManagement = () => {
                     ))}
                   </select>
                 </div>
-
-                <div>
+                   <div>
                   <label
                     htmlFor="subSubCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -530,8 +768,10 @@ const AddProductManagement = () => {
                 </div>
               </div>
 
-              {isAdmin && (
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+             
+
+                {isAdmin && (
                   <div>
                     <label
                       htmlFor="vendorId"
@@ -555,8 +795,9 @@ const AddProductManagement = () => {
                       ))}
                     </select>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
               {isVendor && (
                 <input type="hidden" name="vendorId" value={vendorId} />
               )}
@@ -577,6 +818,51 @@ const AddProductManagement = () => {
                   }
                   className="mt-1 bg-white"
                 />
+                
+                {/* Keywords section moved here, below description */}
+                <div className="mt-4">
+                  <label
+                    htmlFor="keywords"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Keywords
+                  </label>
+                  <div className="mt-1">
+                    {keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywords.map((keyword) => (
+                          <span 
+                            key={keyword.id} 
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {keyword.text}
+                            <button
+                              type="button"
+                              onClick={() => removeKeyword(keyword.id)}
+                              className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:outline-none focus:bg-blue-500 focus:text-white"
+                            >
+                              <span className="sr-only">Remove keyword</span>
+                              <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                                <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      name="keywords"
+                      id="keywords"
+                      value={product.keywords}
+                      onChange={handleKeywordsChange}
+                      onKeyDown={handleKeywordsKeyDown}
+                      ref={keywordsInputRef}
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
+                      placeholder="Type a keyword and press Enter"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -820,90 +1106,80 @@ const AddProductManagement = () => {
                           ))}
                         </div>
                       </div>
+
+                      {/* Add variant images section */}
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Variant Images
+                        </label>
+                        <input
+                          type="file"
+                          onChange={(e) => handleVariantImageChange(variantIndex, e)}
+                          multiple
+                          className="hidden"
+                          accept="image/*"
+                          id={`variant-images-${variantIndex}`}
+                        />
+                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                          <div className="space-y-1 text-center">
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor={`variant-images-${variantIndex}`}
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-gold-600 hover:text-gold-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gold-500"
+                              >
+                                <span>Upload files</span>
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, GIF up to 5MB
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Draggable image previews */}
+                        {variant.images.length > 0 && (
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(event) => handleDragEnd(variantIndex, event)}
+                          >
+                            <SortableContext
+                              items={variant.images.map((_, index) => index)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                                {variant.images.map((image, imageIndex) => (
+                                  <SortableImageItem
+                                    key={imageIndex}
+                                    id={imageIndex}
+                                    image={image}
+                                    index={imageIndex}
+                                    onRemove={(index) => removeVariantImage(variantIndex, index)}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Product Images
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  multiple
-                  className="hidden"
-                  accept="image/*"
-                />
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-gold-600 hover:text-gold-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gold-500"
-                      >
-                        <span onClick={triggerFileInput}>Upload files</span>
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
-                  </div>
-                </div>
-                {images.length > 0 && (
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {Array.from(images).map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={URL.createObjectURL(image)}
-                          alt={`Preview ${index}`}
-                          className="h-24 w-full object-cover rounded"
-                        />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setImages((prev) =>
-                              prev.filter((_, i) => i !== index)
-                            )
-                          }
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div className="pt-5">

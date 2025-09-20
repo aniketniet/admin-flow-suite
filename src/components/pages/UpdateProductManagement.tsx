@@ -3,6 +3,24 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import JoditEditor from "jodit-react";
+// Add these imports for drag and drop functionality
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const UpdateProductManagement = () => {
   const id = useParams().productId;
@@ -21,6 +39,7 @@ const UpdateProductManagement = () => {
   const [product, setProduct] = useState({
     name: "",
     description: "",
+    keywords: "",
     mainCategoryId: "",
     subCategoryId: "",
     subSubCategoryId: "",
@@ -33,14 +52,20 @@ const UpdateProductManagement = () => {
         sellingprice: "",
         originalPrice: "",
         attributes: [{ key: "size", value: "" }],
+        images: [],
+        sgst: "",
+        cgst: "",
+        isManualEdit: false,
       },
     ],
   });
 
+  const [keywords, setKeywords] = useState([]);
+  const keywordsInputRef = useRef(null);
   const editor = useRef(null);
 
   // Jodit configuration
-  const joditConfig = {
+  const joditConfig: Record<string, unknown> = {
     readonly: false,
     toolbar: true,
     spellcheck: true,
@@ -108,8 +133,6 @@ const UpdateProductManagement = () => {
     ],
   };
 
-  const [images, setImages] = useState([]);
-  const [existingImages, setExistingImages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [mainCategories, setMainCategories] = useState([]);
@@ -117,12 +140,84 @@ const UpdateProductManagement = () => {
   const [subSubCategories, setSubSubCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const fileInputRef = useRef(null);
 
   const token = Cookies.get("admin_token") || Cookies.get("vendor_token");
   const role = Cookies.get("user_role");
   const isAdmin = role === "admin";
   const isVendor = role === "vendor";
+
+  // Add sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Create a sortable item component for images
+  const SortableImageItem = ({ id, image, index, onRemove, variantIndex }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+      <div 
+        ref={setNodeRef} 
+        style={style} 
+        className="relative group"
+      >
+        <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded">
+          <div 
+            {...attributes} 
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing p-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <img
+            src={image instanceof File ? URL.createObjectURL(image) : `${import.meta.env.VITE_BASE_URL_IMG}${image}`}
+            alt={`Preview ${index}`}
+            className="h-16 w-16 object-cover rounded"
+          />
+          <button
+            type="button"
+            onClick={() => onRemove(variantIndex, index)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Handle drag end for variant images
+  const handleDragEnd = (variantIndex, event) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setProduct((prev) => {
+        const updatedVariants = [...prev.variants];
+        const oldIndex = active.id;
+        const newIndex = over.id;
+        
+        updatedVariants[variantIndex] = {
+          ...updatedVariants[variantIndex],
+          images: arrayMove(updatedVariants[variantIndex].images, oldIndex, newIndex),
+        };
+        
+        return { ...prev, variants: updatedVariants };
+      });
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -141,9 +236,20 @@ const UpdateProductManagement = () => {
 
         const productData = productResponse.data.data;
         console.log("Fetched product data:", productData);
+        
+        // Parse keywords from the product data
+        let parsedKeywords = [];
+        if (productData.keywords) {
+          parsedKeywords = productData.keywords.split(',').map((keyword, index) => ({
+            id: Date.now().toString() + index,
+            text: keyword.trim()
+          }));
+        }
+        
         setProduct({
           name: productData.name || "",
           description: productData.description || "",
+          keywords: "",
           mainCategoryId: productData.mainCategoryId?.toString() || "",
           subCategoryId: productData.subCategoryId?.toString() || "",
           subSubCategoryId: productData.subSubCategoryId?.toString() || "",
@@ -151,6 +257,7 @@ const UpdateProductManagement = () => {
           variants:
             productData.variants && productData.variants.length > 0
               ? productData.variants.map((variant) => ({
+                  id: variant.id,
                   sku: variant.sku || "",
                   price: variant.price?.toString() || "",
                   originalPrice: variant.originalPrice?.toString() || "",
@@ -159,6 +266,10 @@ const UpdateProductManagement = () => {
                   attributes: variant.attributes || [
                     { key: "size", value: "" },
                   ],
+                  images: variant.images || [],
+                  sgst: variant.sgst?.toString() || "",
+                  cgst: variant.cgst?.toString() || "",
+                  isManualEdit: false,
                 }))
               : [
                   {
@@ -168,21 +279,15 @@ const UpdateProductManagement = () => {
                     originalPrice: "",
                     sellingprice: "",
                     attributes: [{ key: "size", value: "" }],
+                    images: [],
+                    sgst: "",
+                    cgst: "",
+                    isManualEdit: false,
                   },
                 ],
         });
-
-        // Flatten all variant images into a single array for display
-        const allVariantImages = productData.variants
-          .flatMap((variant) =>
-            Array.isArray(variant.images) ? variant.images : []
-          )
-          .filter(
-            (img, index, self) => self.findIndex((i) => i === img) === index
-          ); // Remove duplicates
-
-        setExistingImages(allVariantImages);
-        console.log("Existing images:", allVariantImages);
+        
+        setKeywords(parsedKeywords);
 
         // Fetch main categories with their subcategories and sub-subcategories
         const mainCategoriesResponse = await axios.get(
@@ -378,6 +483,10 @@ const UpdateProductManagement = () => {
           originalPrice: "",
           sellingprice: "",
           attributes: [{ key: "size", value: "" }],
+          images: [],
+          sgst: "",
+          cgst: "",
+          isManualEdit: false,
         },
       ],
     }));
@@ -404,16 +513,60 @@ const UpdateProductManagement = () => {
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
-  const handleImageChange = (e) => {
-    setImages([...e.target.files]);
+  const handleKeywordsChange = (e) => {
+    setProduct((prev) => ({ ...prev, keywords: e.target.value }));
   };
+
+  const handleKeywordsKeyDown = (e) => {
+    if (e.key === 'Enter' && product.keywords.trim() !== '') {
+      e.preventDefault();
+      const newKeyword = {
+        id: Date.now().toString(),
+        text: product.keywords.trim()
+      };
+      setKeywords(prev => [...prev, newKeyword]);
+      setProduct((prev) => ({ ...prev, keywords: "" }));
+    }
+  };
+
+  const removeKeyword = (id) => {
+    setKeywords(prev => prev.filter(keyword => keyword.id !== id));
+  };
+
+  // Remove these functions since we removed the extra image section
+  // const handleImageChange = (e) => {
+  //   setImages([...e.target.files]);
+  // // };
 
   // const removeExistingImage = (index) => {
   //   setExistingImages((prev) => prev.filter((_, i) => i !== index));
   // };
 
-  const triggerFileInput = () => {
-    fileInputRef.current.click();
+  // const triggerFileInput = () => {
+  //   fileInputRef.current.click();
+  // };
+
+  const handleVariantImageChange = (variantIndex, e) => {
+    const files = Array.from(e.target.files || []);
+    setProduct((prev) => {
+      const updatedVariants = [...prev.variants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        images: [...updatedVariants[variantIndex].images, ...files],
+      };
+      return { ...prev, variants: updatedVariants };
+    });
+  };
+
+  const removeVariantImage = (variantIndex, imageIndex) => {
+    setProduct((prev) => {
+      const updatedVariants = [...prev.variants];
+      updatedVariants[variantIndex] = {
+        ...updatedVariants[variantIndex],
+        images: updatedVariants[variantIndex].images.filter((_, i) => i !== imageIndex),
+      };
+      return { ...prev, variants: updatedVariants };
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -425,30 +578,32 @@ const UpdateProductManagement = () => {
       const formData = new FormData();
       formData.append("name", product.name);
       formData.append("description", product.description);
+      formData.append("keywords", keywords.map(k => k.text).join(', ')); // Add keywords to form data
       formData.append("mainCategoryId", product.mainCategoryId);
       formData.append("subCategoryId", product.subCategoryId);
       formData.append("subSubCategoryId", product.subSubCategoryId);
       if (isAdmin) {
         formData.append("vendorId", product.vendorId);
       }
+      
       // Prepare variants data with existing images if no new images are uploaded
-
       const variantsData = product.variants.map((variant) => {
         return {
           ...variant,
           // If no new images are uploaded, keep the existing images
-          images: images.length === 0 ? existingImages : [],
+          images: variant.images || [],
         };
       });
 
       formData.append("variants", JSON.stringify(variantsData));
 
-      // existingImages.forEach((url) => {
-      //   formData.append("images_0", url);
-      // });
-
-      images.forEach((image, index) => {
-        formData.append(`images_0`, image);
+      // Append images for each variant
+      product.variants.forEach((variant, variantIndex) => {
+        variant.images.forEach((image, imageIndex) => {
+          if (image instanceof File) { // Only append new files
+            formData.append(`images_${variantIndex}`, image);
+          }
+        });
       });
 
       await axios.put(
@@ -533,8 +688,7 @@ const UpdateProductManagement = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   />
                 </div>
-
-                <div>
+                 <div>
                   <label
                     htmlFor="mainCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -556,9 +710,13 @@ const UpdateProductManagement = () => {
                     ))}
                   </select>
                 </div>
+
+               
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+               
+
                 <div>
                   <label
                     htmlFor="subCategoryId"
@@ -582,8 +740,7 @@ const UpdateProductManagement = () => {
                     ))}
                   </select>
                 </div>
-
-                <div>
+                 <div>
                   <label
                     htmlFor="subSubCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -606,6 +763,10 @@ const UpdateProductManagement = () => {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+               
               </div>
 
               {isAdmin && (
@@ -651,6 +812,51 @@ const UpdateProductManagement = () => {
                   }
                   className="mt-1 bg-white"
                 />
+                
+                {/* Keywords section moved here, below description */}
+                <div className="mt-4">
+                  <label
+                    htmlFor="keywords"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Keywords
+                  </label>
+                  <div className="mt-1">
+                    {keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {keywords.map((keyword) => (
+                          <span 
+                            key={keyword.id} 
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {keyword.text}
+                            <button
+                              type="button"
+                              onClick={() => removeKeyword(keyword.id)}
+                              className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:outline-none focus:bg-blue-500 focus:text-white"
+                            >
+                              <span className="sr-only">Remove keyword</span>
+                              <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
+                                <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                              </svg>
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      type="text"
+                      name="keywords"
+                      id="keywords"
+                      value={product.keywords}
+                      onChange={handleKeywordsChange}
+                      onKeyDown={handleKeywordsKeyDown}
+                      ref={keywordsInputRef}
+                      className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
+                      placeholder="Type a keyword and press Enter"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -923,131 +1129,81 @@ const UpdateProductManagement = () => {
                           ))}
                         </div>
                       </div>
+
+                      {/* Add variant images section */}
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Variant Images
+                        </label>
+                        <input
+                          type="file"
+                          onChange={(e) => handleVariantImageChange(variantIndex, e)}
+                          multiple
+                          className="hidden"
+                          accept="image/*"
+                          id={`variant-images-${variantIndex}`}
+                        />
+                        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                          <div className="space-y-1 text-center">
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400"
+                              stroke="currentColor"
+                              fill="none"
+                              viewBox="0 0 48 48"
+                              aria-hidden="true"
+                            >
+                              <path
+                                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                                strokeWidth={2}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor={`variant-images-${variantIndex}`}
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-gold-600 hover:text-gold-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gold-500"
+                              >
+                                <span>Upload files</span>
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, GIF up to 10MB
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Draggable image previews */}
+                        {variant.images.length > 0 && (
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(event) => handleDragEnd(variantIndex, event)}
+                          >
+                            <SortableContext
+                              items={variant.images.map((_, index) => index)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                                {variant.images.map((image, imageIndex) => (
+                                  <SortableImageItem
+                                    key={imageIndex}
+                                    id={imageIndex}
+                                    image={image}
+                                    index={imageIndex}
+                                    onRemove={removeVariantImage}
+                                    variantIndex={variantIndex}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Product Images
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageChange}
-                  multiple
-                  className="hidden"
-                  accept="image/*"
-                />
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-gold-600 hover:text-gold-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gold-500"
-                      >
-                        <span onClick={triggerFileInput}>Upload files</span>
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Existing Images
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                    {existingImages.map((image, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={`${import.meta.env.VITE_BASE_URL_IMG}${image}`}
-                          alt={`Preview ${index}`}
-                          className="h-24 w-full object-cover rounded"
-                        />
-                        {/* <button
-                          type="button"
-                          onClick={() => removeExistingImage(index)}
-                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button> */}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {images.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      New Images
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                      {Array.from(images).map((image, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={URL.createObjectURL(image)}
-                            alt={`Preview ${index}`}
-                            className="h-24 w-full object-cover rounded"
-                          />
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setImages((prev) =>
-                                prev.filter((_, i) => i !== index)
-                              )
-                            }
-                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               <div className="pt-5">
