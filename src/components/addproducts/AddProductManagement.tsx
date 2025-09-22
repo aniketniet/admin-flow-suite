@@ -912,7 +912,7 @@ const AddProductManagement = () => {
                             htmlFor={`sku-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            SKU <span className="text-red-500">*</span>
+                            Varient Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -1006,12 +1006,30 @@ const AddProductManagement = () => {
                             />
                           </div>
                         </div>
-                        <input
-                          type="hidden"
-                          id={`price-${variantIndex}`}
-                          name="price"
-                          value={variant.price}
-                        />
+                        <div>
+                          <label
+                            htmlFor={`price-${variantIndex}`}
+                            className="block text-sm font-medium text-gray-700 mt-2"
+                          >
+                            Purchasing Price
+                          </label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">
+                                ₹
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              id={`price-${variantIndex}`}
+                              name="price"
+                              value={variant.price}
+                              readOnly
+                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 bg-gray-100"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
                       </div>
 
                       <div className="mt-6">

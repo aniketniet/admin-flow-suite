@@ -906,7 +906,7 @@ const UpdateProductManagement = () => {
                             htmlFor={`sku-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            SKU <span className="text-red-500">*</span>
+                            Varient Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -1006,12 +1006,12 @@ const UpdateProductManagement = () => {
                           >
                             Price <span className="text-red-500">*</span>
                           </label> */}
-                          <div className="hidden">
+                          <div className="">
                             <label
                               htmlFor={`price-${variantIndex}`}
                               className="block text-sm font-medium text-gray-700 mt-2"
                             >
-                              Price <span className="text-red-500">*</span>
+                              Purchasing Price
                             </label>
                             <div className="mt-1 relative rounded-md shadow-sm">
                               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
