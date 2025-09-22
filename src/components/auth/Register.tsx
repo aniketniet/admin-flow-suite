@@ -757,26 +757,17 @@ const PickupAddressStep = ({
     setError("");
     
     // If pincode is 6 digits, fetch location data
-
     if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
       setPincodeLoading(true);
       try {
-        const response = await fetch(`https://api.postalpincode.in/pincode/${pincode}`);
+        // Using the new Shopinger API endpoint
+        const response = await fetch(`${import.meta.env.VITE_BASE_UR}public/get-pincode-details/${pincode}`);
         const data = await response.json();
         
-        if (data && data[0].Status === "Success" && data[0].PostOffice && data[0].PostOffice.length > 0) {
-          // Use the first post office data to auto-fill fields
-          const postOffice = data[0].PostOffice[0];
-          
-          // Set country to India (not changeable as per requirement)
-          updateFormData("country", "India");
-          
-          // Auto-fill state and city/district
-          updateFormData("state", postOffice.State);
-          updateFormData("city", postOffice.District);
-          
-          // Fetch states for India to populate the dropdown
-          fetchStates("India");
+        if (data && data.success && data.data) {
+          // Auto-fill state and city/district from the new API response
+          updateFormData("state", data.data.State);
+          updateFormData("city", data.data.District);
         } else {
           setError("Invalid PIN code or no data found");
         }
