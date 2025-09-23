@@ -567,7 +567,7 @@ const AddProductManagement = () => {
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${userToken}`,
           "Content-Type": "multipart/form-data",
         },
       });
@@ -1024,8 +1024,8 @@ const AddProductManagement = () => {
                               id={`price-${variantIndex}`}
                               name="price"
                               value={variant.price}
-                              readOnly
-                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 bg-gray-100"
+                              
+                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 "
                               placeholder="0.00"
                             />
                           </div>
