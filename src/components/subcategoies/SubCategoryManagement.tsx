@@ -66,6 +66,7 @@ interface SubCategory {
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
+  is_hidden?: boolean;
 }
 
 interface MainCategory {
@@ -91,6 +92,7 @@ export function SubCategoryManagement() {
     name: "",
     description: "",
     image: null as File | null,
+    is_hidden: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -219,6 +221,7 @@ export function SubCategoryManagement() {
       formDataToSend.append("mainCategoryId", formData.mainCategoryId);
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
+      formDataToSend.append("is_hidden", formData.is_hidden ? "1" : "0"); // Convert boolean to string
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
@@ -268,6 +271,7 @@ export function SubCategoryManagement() {
           name: "",
           description: "",
           image: null,
+          is_hidden: false,
         });
       } else {
         toast({
@@ -303,6 +307,7 @@ export function SubCategoryManagement() {
       name: category.name,
       description: category.description || "",
       image: null,
+      is_hidden: category.is_hidden || false,
     });
     setIsEditDialogOpen(true);
   };
@@ -484,6 +489,22 @@ export function SubCategoryManagement() {
                     onChange={handleFileChange}
                   />
                 </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="add-is-hidden"
+                    name="is_hidden"
+                    type="checkbox"
+                    checked={formData.is_hidden}
+                    onChange={(e) => 
+                      setFormData((prev) => ({
+                        ...prev,
+                        is_hidden: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="add-is-hidden">Hide from menu</Label>
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -520,6 +541,7 @@ export function SubCategoryManagement() {
                 <TableHead>Slug</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -546,6 +568,13 @@ export function SubCategoryManagement() {
                     )}
                   </TableCell>
                   <TableCell>{formatDate(category.createdAt)}</TableCell>
+                  <TableCell>
+                    {category.is_hidden ? (
+                      <Badge variant="destructive">Hidden</Badge>
+                    ) : (
+                      <Badge variant="default">Visible</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -608,7 +637,7 @@ export function SubCategoryManagement() {
                 const pages = [];
                 const maxVisiblePages = 5;
                 let startPage = Math.max(1, currentPage - 2);
-                let endPage = Math.min(
+                const endPage = Math.min(
                   totalPages,
                   startPage + maxVisiblePages - 1
                 );
@@ -761,6 +790,22 @@ export function SubCategoryManagement() {
                 accept="image/*"
                 onChange={handleFileChange}
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                id="edit-is-hidden"
+                name="is_hidden"
+                type="checkbox"
+                checked={formData.is_hidden}
+                onChange={(e) => 
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_hidden: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="edit-is-hidden">Hide from menu</Label>
             </div>
             <div className="flex justify-end space-x-2">
               <Button

@@ -66,6 +66,7 @@ interface SubSubCategory {
   description?: string;
   imgUrl?: string;
   createdAt?: string;
+  is_hidden?: boolean;
   updatedAt?: string;
 }
 
@@ -98,6 +99,7 @@ export function SubSubCategoryManagement() {
     name: "",
     description: "",
     image: null as File | null,
+    is_hidden: false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -220,6 +222,8 @@ export function SubSubCategoryManagement() {
       formDataToSend.append("subCategoryId", formData.subCategoryId);
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description);
+      formDataToSend.append("is_hidden", formData.is_hidden ? "1" : "0");
+      // formDataToSend.append("is_active", "true");
       if (formData.image) {
         formDataToSend.append("image", formData.image);
       }
@@ -257,6 +261,7 @@ export function SubSubCategoryManagement() {
           name: "",
           description: "",
           image: null,
+          is_hidden: false,
         });
       } else {
         toast({
@@ -295,6 +300,7 @@ export function SubSubCategoryManagement() {
       subCategoryId: (category.subCategoryId ?? "").toString(),
       name: category.name ?? "",
       description: category.description || "",
+      is_hidden: category.is_hidden || false,
       image: null,
     });
 
@@ -562,6 +568,22 @@ export function SubSubCategoryManagement() {
                     onChange={handleFileChange}
                   />
                 </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="edit-is-hidden"
+                    name="is_hidden"
+                    type="checkbox"
+                    checked={formData.is_hidden}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        is_hidden: e.target.checked,
+                      }))
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="edit-is-hidden">Hide from menu</Label>
+                </div>
                 <div className="flex justify-end space-x-2">
                   <Button
                     variant="outline"
@@ -581,10 +603,11 @@ export function SubSubCategoryManagement() {
       </div>
 
       {/* Categories Table */}
-        <Card>
+      <Card>
         <CardHeader>
           <CardTitle>
-            Sub-Categories ({filteredCategories.length}) - Page {currentPage} of {totalPages}
+            Sub-Categories ({filteredCategories.length}) - Page {currentPage} of{" "}
+            {totalPages}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -597,6 +620,7 @@ export function SubSubCategoryManagement() {
                 <TableHead>Slug</TableHead>
                 <TableHead>Image</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -608,7 +632,7 @@ export function SubSubCategoryManagement() {
                     <div className="font-medium">{category.name}</div>
                   </TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {category.description?.slice(0, 20) || '-'}
+                    {category.description?.slice(0, 20) || "-"}
                   </TableCell>
                   <TableCell>{category.slug}</TableCell>
                   <TableCell>
@@ -623,6 +647,13 @@ export function SubSubCategoryManagement() {
                     )}
                   </TableCell>
                   <TableCell>{formatDate(category.createdAt)}</TableCell>
+                  <TableCell>
+                    {category.is_hidden ? (
+                      <Badge variant="destructive">Hidden</Badge>
+                    ) : (
+                      <Badge variant="default">Visible</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -651,7 +682,10 @@ export function SubSubCategoryManagement() {
               ))}
               {filteredCategories.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center font-semibold text-gray-800">
+                  <TableCell
+                    colSpan={7}
+                    className="text-center font-semibold text-gray-800"
+                  >
                     No sub-categories found.
                   </TableCell>
                 </TableRow>
@@ -660,111 +694,125 @@ export function SubSubCategoryManagement() {
           </Table>
 
           {/* Pagination Controls */}
-           {filteredCategories.length > itemsPerPage && (
-  <div className="flex items-center justify-between mt-4">
-    <div className="text-sm text-gray-500">
-      Showing {indexOfFirstItem + 1} to{" "}
-      {Math.min(indexOfLastItem, filteredCategories.length)} of{" "}
-      {filteredCategories.length} sub-categories
-    </div>
-    <div className="flex space-x-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={goToPreviousPage}
-        disabled={currentPage === 1}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-      
-      {/* Pagination with dynamic page buttons */}
-      {totalPages <= 4 ? (
-        // Show all pages if total pages is 4 or less
-        Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-          <Button
-            key={number}
-            variant={currentPage === number ? "default" : "outline"}
-            size="sm"
-            onClick={() => paginate(number)}
-          >
-            {number}
-          </Button>
-        ))
-      ) : (
-        <>
-          {/* Always show first page */}
-          <Button
-            variant={currentPage === 1 ? "default" : "outline"}
-            size="sm"
-            onClick={() => paginate(1)}
-          >
-            1
-          </Button>
-          
-          {/* Show ellipsis after page 1 if current page is beyond 3 */}
-          {currentPage > 3 && <span className="px-2">...</span>}
-          
-          {/* Show page numbers with special handling for page 3 */}
-          {Array.from({ length: Math.min(3, totalPages - 2) }, (_, i) => {
-            let page;
-            
-            // When on page 3, show pages 2, 3, and 5
-            if (currentPage === 3) {
-              page = i === 0 ? 2 : i === 1 ? 3 : 5;
-            } 
-            // Normal behavior for other cases
-            else if (currentPage === 1) {
-              page = 2 + i;
-            } else if (currentPage === totalPages) {
-              page = totalPages - 2 + i;
-            } else {
-              page = currentPage - 1 + i;
-            }
-            
-            // Ensure page is within valid range and not page 4 when current page is 3
-            if (page > 1 && page <= totalPages && 
-                !(currentPage === 3 && page === 4)) {
-              return (
+          {filteredCategories.length > itemsPerPage && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-500">
+                Showing {indexOfFirstItem + 1} to{" "}
+                {Math.min(indexOfLastItem, filteredCategories.length)} of{" "}
+                {filteredCategories.length} sub-categories
+              </div>
+              <div className="flex space-x-2">
                 <Button
-                  key={page}
-                  variant={currentPage === page ? "default" : "outline"}
+                  variant="outline"
                   size="sm"
-                  onClick={() => paginate(page)}
+                  onClick={goToPreviousPage}
+                  disabled={currentPage === 1}
                 >
-                  {page}
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
-              );
-            }
-            return null;
-          })}
-          
-          {/* Show ellipsis before last page if needed */}
-          {currentPage < totalPages - 2 && <span className="px-2">...</span>}
-          
-          {/* Always show last page if not already shown */}
-          {totalPages > 1 && currentPage !== totalPages - 2 && (
-            <Button
-              variant={currentPage === totalPages ? "default" : "outline"}
-              size="sm"
-              onClick={() => paginate(totalPages)}
-            >
-              {totalPages}
-            </Button>
+
+                {/* Pagination with dynamic page buttons */}
+                {totalPages <= 4 ? (
+                  // Show all pages if total pages is 4 or less
+                  Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (number) => (
+                      <Button
+                        key={number}
+                        variant={currentPage === number ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => paginate(number)}
+                      >
+                        {number}
+                      </Button>
+                    )
+                  )
+                ) : (
+                  <>
+                    {/* Always show first page */}
+                    <Button
+                      variant={currentPage === 1 ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => paginate(1)}
+                    >
+                      1
+                    </Button>
+
+                    {/* Show ellipsis after page 1 if current page is beyond 3 */}
+                    {currentPage > 3 && <span className="px-2">...</span>}
+
+                    {/* Show page numbers with special handling for page 3 */}
+                    {Array.from(
+                      { length: Math.min(3, totalPages - 2) },
+                      (_, i) => {
+                        let page;
+
+                        // When on page 3, show pages 2, 3, and 5
+                        if (currentPage === 3) {
+                          page = i === 0 ? 2 : i === 1 ? 3 : 5;
+                        }
+                        // Normal behavior for other cases
+                        else if (currentPage === 1) {
+                          page = 2 + i;
+                        } else if (currentPage === totalPages) {
+                          page = totalPages - 2 + i;
+                        } else {
+                          page = currentPage - 1 + i;
+                        }
+
+                        // Ensure page is within valid range and not page 4 when current page is 3
+                        if (
+                          page > 1 &&
+                          page <= totalPages &&
+                          !(currentPage === 3 && page === 4)
+                        ) {
+                          return (
+                            <Button
+                              key={page}
+                              variant={
+                                currentPage === page ? "default" : "outline"
+                              }
+                              size="sm"
+                              onClick={() => paginate(page)}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        }
+                        return null;
+                      }
+                    )}
+
+                    {/* Show ellipsis before last page if needed */}
+                    {currentPage < totalPages - 2 && (
+                      <span className="px-2">...</span>
+                    )}
+
+                    {/* Always show last page if not already shown */}
+                    {totalPages > 1 && currentPage !== totalPages - 2 && (
+                      <Button
+                        variant={
+                          currentPage === totalPages ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => paginate(totalPages)}
+                      >
+                        {totalPages}
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToNextPage}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
-        </>
-      )}
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={goToNextPage}
-        disabled={currentPage === totalPages}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-)}
         </CardContent>
       </Card>
 
@@ -880,6 +928,24 @@ export function SubSubCategoryManagement() {
                 onChange={handleFileChange}
               />
             </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                id="edit-is-hidden"
+                name="is_hidden"
+                type="checkbox"
+                checked={formData.is_hidden}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    is_hidden: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="edit-is-hidden">Hide from menu</Label>
+            </div>
+
             <div className="flex justify-end space-x-2">
               <Button
                 variant="outline"

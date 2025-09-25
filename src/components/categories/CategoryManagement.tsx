@@ -50,7 +50,8 @@ interface Category {
   imgUrl: string;
   createdAt: string;
   updatedAt: string;
-  platform_fee?: string; // newly added optional platform fee (naming based on backend expectation)
+  platform_fee?: string;
+  is_hidden?: boolean; 
 }
 import Cookies from "js-cookie";
 
@@ -73,6 +74,7 @@ export function CategoryManagement() {
     position: "",
     platform_fee: "",
     commission: "",
+    is_hidden: false,
   });
   const [addFormData, setAddFormData] = useState({
     name: "",
@@ -84,6 +86,7 @@ export function CategoryManagement() {
     position: "",
     platform_fee: "",
     commission: "",
+    is_hidden: false,
   });
   const [imagePreview, setImagePreview] = useState("");
   const [addImagePreview, setAddImagePreview] = useState("");
@@ -164,6 +167,7 @@ export function CategoryManagement() {
       position: category.sortOrder || "",
       platform_fee: catWithFee.platform_fee || catWithFee.plateform_fee || "",
       commission: category.commission || "",
+      is_hidden: category.is_hidden || false,
     });
     if (category.imgUrl) {
       setImagePreview(`${import.meta.env.VITE_BASE_URL_IMG}${category.imgUrl}`);
@@ -174,18 +178,18 @@ export function CategoryManagement() {
   };
 
   const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target as HTMLInputElement;
     setEditFormData({
       ...editFormData,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
   const handleAddFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target as HTMLInputElement;
     setAddFormData({
       ...addFormData,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     });
   };
 
@@ -236,6 +240,7 @@ export function CategoryManagement() {
       // backend expects 'plateform_fee' (typo) and it's required
       formData.append("plateform_fee", editFormData.platform_fee);
       formData.append("commission", editFormData.commission);
+      formData.append("is_hidden", editFormData.is_hidden ? "1" : "0"  );
       if (editFormData.image) {
         formData.append("image", editFormData.image);
       }
@@ -296,6 +301,7 @@ export function CategoryManagement() {
       formData.append("sortOrder", addFormData.position);
       formData.append("plateform_fee", addFormData.platform_fee);
       formData.append("commission", addFormData.commission);
+      formData.append("is_hidden", addFormData.is_hidden ? "1" : "0"); // Convert boolean to string
       if (addFormData.image) {
         formData.append("image", addFormData.image);
       }
@@ -329,6 +335,7 @@ export function CategoryManagement() {
           image: null,
           platform_fee: "",
           commission: "",
+          is_hidden: false,
         });
         setAddImagePreview("");
         toast.success("Category added successfully");
@@ -509,6 +516,17 @@ export function CategoryManagement() {
                     }
                   />
                 </div>
+                <div className="flex items-center space-x-2 md:col-span-2">
+                  <input
+                    id="add-is-hidden"
+                    name="is_hidden"
+                    type="checkbox"
+                    checked={addFormData.is_hidden}
+                    onChange={handleAddFormChange}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="add-is-hidden">Hide from menu</Label>
+                </div>
                 <div className="flex flex-col space-y-2 md:col-span-2">
                   <Label htmlFor="image">Category Image</Label>
                   <Input
@@ -562,7 +580,7 @@ export function CategoryManagement() {
                 <TableHead>SGST</TableHead>
                 <TableHead>CGST</TableHead>
                 <TableHead> Admin Commission</TableHead>
-
+                <TableHead>Visibility</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -599,7 +617,13 @@ export function CategoryManagement() {
                   <TableCell>{category.sgst}</TableCell>
                   <TableCell>{category.cgst}</TableCell>
                   <TableCell>{category.commission}</TableCell>
-
+                  <TableCell>
+                    {category.is_hidden ? (
+                      <Badge variant="destructive">Hidden</Badge>
+                    ) : (
+                      <Badge variant="default">Visible</Badge>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -822,6 +846,17 @@ export function CategoryManagement() {
                 }
                 placeholder="Enter Admin commission"
               />
+            </div>
+            <div className="flex items-center space-x-2 md:col-span-2">
+              <input
+                id="edit-is-hidden"
+                name="is_hidden"
+                type="checkbox"
+                checked={editFormData.is_hidden}
+                onChange={handleEditFormChange}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <Label htmlFor="edit-is-hidden">Hide from menu</Label>
             </div>
             <div className="flex flex-col space-y-2 md:col-span-2">
               <Label htmlFor="edit-image">Category Image</Label>

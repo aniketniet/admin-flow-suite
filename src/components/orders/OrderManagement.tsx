@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,19 +101,29 @@ interface ShipRocketResponse {
 
 export function OrderManagement() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const role = Cookies.get("user_role");
   const isAdmin = role === "admin";
   const isVendor = role === "vendor";
   const navigate = useNavigate();
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchTerm]);
 
   // Get the appropriate token based on role
   const token = isAdmin ? Cookies.get("admin_token") : Cookies.get("vendor_token");
@@ -187,48 +197,72 @@ export function OrderManagement() {
         return "bg-purple-100 text-purple-800";
       case "CANCELLED":
         return "bg-red-100 text-red-800";
+      case "PENDING":
+        return "bg-orange-100 text-orange-800";
+      case "RETURNED":
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  };
+
+  // Helper function to get the most common status among order items
+  const getMostCommonItemStatus = (orderItems: Order['orderItems']) => {
+    if (!orderItems || orderItems.length === 0) return null;
+    
+    const statusCount: Record<string, number> = {};
+    orderItems.forEach(item => {
+      const status = item.orderItemStatus;
+      statusCount[status] = (statusCount[status] || 0) + 1;
+    });
+    
+    let mostCommonStatus = '';
+    let maxCount = 0;
+    
+    Object.entries(statusCount).forEach(([status, count]) => {
+      if (count > maxCount) {
+        mostCommonStatus = status;
+        maxCount = count;
+      }
+    });
+    
+    return mostCommonStatus;
   };
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
       case "razorpay":
         return "Razorpay";
-      case "cod":
+      case "COD":
         return "Cash on Delivery";
-      case "paypal":
-        return "PayPal";
       default:
         return method;
     }
   };
 
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      order.id.toString().includes(searchTerm) ||
-      order.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.paymentOrderId.toLowerCase().includes(searchTerm.toLowerCase());
+    // Improved search to include product names with better error handling
+    const searchTermLower = debouncedSearchTerm.toLowerCase().trim();
+    const matchesSearch = searchTermLower === "" || 
+      ((order?.id?.toString() || "").toLowerCase().includes(searchTermLower) ||
+      (order?.user?.name || "").toLowerCase().includes(searchTermLower) ||
+      (order?.paymentOrderId || "").toLowerCase().includes(searchTermLower) ||
+      (order?.orderItems && order?.orderItems?.some(item => 
+        (item?.variant?.product?.name || "").toLowerCase().includes(searchTermLower)
+      )));
 
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "order"
-        ? order.status
-        : statusFilter === "item"
-        ? order.orderItems.some((item) => item.orderItemStatus === statusFilter)
-        : false);
-
+    // Payment filter is working correctly
     const matchesPayment =
       paymentFilter === "all" || order.paymentMode === paymentFilter;
 
-    return matchesSearch && matchesStatus && matchesPayment;
+    return matchesSearch && matchesPayment;
   });
 
   // Pagination logic
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const ITEMS_PER_PAGE = 10; // Fixed value instead of state
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstItem = indexOfLastItem - ITEMS_PER_PAGE;
   const currentOrders = filteredOrders.slice(indexOfFirstItem, indexOfLastItem);
 
   const handlePageChange = (page: number) => {
@@ -237,9 +271,9 @@ export function OrderManagement() {
     }
   };
 
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(Number(value));
-    setCurrentPage(1); // Reset to first page when changing items per page
+  const clearFilters = () => {
+    setSearchTerm("");
+    setPaymentFilter("all");
   };
 
   const totalRevenue = orders.reduce(
@@ -310,34 +344,6 @@ export function OrderManagement() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="w-full sm:w-auto">
           <Filter className="h-4 w-4 mr-2" />
-          Status: {statusFilter === "all" ? "All" : statusFilter}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => setStatusFilter("all")}>
-          All
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter("CONFIRMED")}>
-          Confirmed
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter("PROCESSING")}>
-          Processing
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter("SHIPPED")}>
-          Shipped
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter("DELIVERED")}>
-          Delivered
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setStatusFilter("CANCELLED")}>
-          Cancelled
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="w-full sm:w-auto">
-          <Filter className="h-4 w-4 mr-2" />
           Payment:{" "}
           {paymentFilter === "all"
             ? "All"
@@ -351,35 +357,40 @@ export function OrderManagement() {
             <DropdownMenuItem onClick={() => setPaymentFilter("razorpay")}>
           Razorpay
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPaymentFilter("cod")}>
+            <DropdownMenuItem onClick={() => setPaymentFilter("COD")}>
           Cash on Delivery
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        {(searchTerm || paymentFilter !== "all") && (
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            Clear Filters
+          </Button>
+        )}
           </div>
         </div>
         
-        {/* Items per page selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">Show</span>
-          <select
-            value={itemsPerPage}
-            onChange={(e) => handleItemsPerPageChange(e.target.value)}
-            className="border rounded-md p-1 text-sm"
-          >
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-          </select>
-          <span className="text-sm text-gray-600">entries</span>
-        </div>
+
       </div>
 
       {/* Orders Table */}
       <Card>
         <CardHeader>
           <CardTitle>Order Management ({filteredOrders.length})</CardTitle>
+          {(debouncedSearchTerm || paymentFilter !== "all") && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {debouncedSearchTerm && (
+                <Badge variant="secondary" className="text-xs">
+                  Search: "{debouncedSearchTerm}"
+                </Badge>
+              )}
+              {paymentFilter !== "all" && (
+                <Badge variant="secondary" className="text-xs">
+                  Payment: {getPaymentMethodName(paymentFilter)}
+                </Badge>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Table>
@@ -420,9 +431,17 @@ export function OrderManagement() {
                       {getPaymentMethodName(order.paymentMode)}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(order.status) + " pointer-events-none"}>
-                        {order.status}
-                      </Badge>
+                      <div className="flex flex-col gap-1 items-center">
+                        <Badge className={getStatusColor(order.status) + " pointer-events-none"}>
+                          {order.status}
+                        </Badge>
+                        {/* {order.orderItems && order.orderItems.length > 1 && 
+                         getMostCommonItemStatus(order.orderItems) !== order.status && (
+                          <div className="text-xs text-gray-500">
+                            Items have different statuses
+                          </div>
+                        )} */}
+                      </div>
                     </TableCell>
                     <TableCell>{orderDate}</TableCell>
                     <TableCell className="text-right">
@@ -453,7 +472,9 @@ export function OrderManagement() {
                     colSpan={8}
                     className="text-center text-sm text-gray-500"
                   >
-                    No orders found.
+                    {debouncedSearchTerm || paymentFilter !== "all" 
+                      ? `No orders found matching your filters.` 
+                      : "No orders found."}
                   </TableCell>
                 </TableRow>
               )}
