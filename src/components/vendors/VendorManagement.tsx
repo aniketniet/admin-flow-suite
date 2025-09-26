@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { useSearchParams } from "react-router-dom";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,8 @@ import {
   Check,
   X,
   Edit,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { useForm } from "react-hook-form";
@@ -82,12 +85,23 @@ const getStatusColor = (status) => {
 };
 
 export function VendorManagement() {
+  // URL-based pagination and filters
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentPage = parseInt(searchParams.get("page") || "1", 10);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
+  
   const [vendors, setVendors] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentVendor, setCurrentVendor] = useState(null);
   const token = Cookies.get("admin_token");
+  
+  // Track if filters were changed by user interaction
+  const userChangedFilters = useRef(false);
+  const isReturningFromNavigation = useRef(false);
+  
+  // Pagination constants
+  const VENDORS_PER_PAGE = 10;
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -103,6 +117,27 @@ export function VendorManagement() {
       role: "VENDOR",
     },
   });
+
+  // Update URL parameters
+  const updateURLParams = (params) => {
+    const newParams = new URLSearchParams(searchParams);
+    
+    // Clear existing params and set new ones
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === "" || value === null || value === undefined) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, String(value));
+      }
+    });
+    
+    // If we're on page 1, we don't need to include page param
+    if (params.page === 1 || params.page === "1") {
+      newParams.delete("page");
+    }
+    
+    setSearchParams(newParams);
+  };
 
   const fetchVendors = async () => {
     try {
@@ -137,6 +172,7 @@ export function VendorManagement() {
       });
     }
   };
+  
   useEffect(() => {
     fetchVendors();
   }, []);
@@ -158,9 +194,45 @@ export function VendorManagement() {
     setIsAddVendorOpen(true);
   };
 
+  // Filter vendors based on search term
   const filteredVendors = vendors.filter((vendor) =>
     vendor?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase())
   );
+  
+  // Pagination logic
+  const totalPages = Math.ceil(filteredVendors.length / VENDORS_PER_PAGE);
+  const indexOfLastVendor = currentPage * VENDORS_PER_PAGE;
+  const indexOfFirstVendor = indexOfLastVendor - VENDORS_PER_PAGE;
+  const currentVendors = filteredVendors.slice(indexOfFirstVendor, indexOfLastVendor);
+  
+  // Custom search handler that marks user interaction and updates URL
+  const handleSearchChange = (value) => {
+    userChangedFilters.current = true;
+    setSearchTerm(value);
+    updateURLParams({ search: value, page: 1 });
+  };
+  
+  // Change page - update URL parameters
+  const updatePage = (pageNumber) => {
+    // Only update if the page actually changes
+    if (pageNumber !== currentPage) {
+      updateURLParams({ page: pageNumber });
+    }
+  };
+  
+  const paginate = (pageNumber) => updatePage(pageNumber);
+  
+  const nextPage = () => {
+    if (currentPage < Math.ceil(filteredVendors.length / VENDORS_PER_PAGE)) {
+      updatePage(currentPage + 1);
+    }
+  };
+  
+  const prevPage = () => {
+    if (currentPage > 1) {
+      updatePage(currentPage - 1);
+    }
+  };
 
   const onSubmit = async (values) => {
     console.log("Submitting vendor:", values);
@@ -244,7 +316,7 @@ export function VendorManagement() {
               <Input
                 placeholder="Search vendors..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-64 pl-10"
               />
             </div>
@@ -445,9 +517,9 @@ export function VendorManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVendors.map((vendor) => (
+                {currentVendors.map((vendor, index) => (
                   <TableRow key={vendor.id} className="hover:bg-gray-50">
-                    <TableCell>{filteredVendors.indexOf(vendor) + 1}</TableCell>
+                    <TableCell>{indexOfFirstVendor + index + 1}</TableCell>
                     <TableCell className="font-medium">{vendor.name}</TableCell>
                     <TableCell>{vendor.email}</TableCell>
                     <TableCell>{vendor.phone}</TableCell>
@@ -516,10 +588,10 @@ export function VendorManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {filteredVendors.length === 0 && (
+                {currentVendors.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={9}
                       className="text-center font-semibold text-gray-800"
                     >
                       No vendors found.
@@ -528,6 +600,65 @@ export function VendorManagement() {
                 )}
               </TableBody>
             </Table>
+            
+            {/* Pagination Controls */}
+            {filteredVendors.length > VENDORS_PER_PAGE && (
+              <div className="flex items-center justify-between mt-4">
+                <div className="text-sm text-gray-600">
+                  Showing {indexOfFirstVendor + 1} to {Math.min(indexOfLastVendor, filteredVendors.length)} of {filteredVendors.length} vendors
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  {/* Page numbers */}
+                  <div className="flex space-x-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      // Calculate start page for pagination window
+                      let startPage = 1;
+                      if (totalPages <= 5) {
+                        startPage = 1;
+                      } else if (currentPage <= 3) {
+                        startPage = 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        startPage = totalPages - 4;
+                      } else {
+                        startPage = currentPage - 2;
+                      }
+                      
+                      const page = startPage + i;
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => paginate(page)}
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={nextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
