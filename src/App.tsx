@@ -47,6 +47,7 @@ import { ContactQueriesManagement } from "./pages/ContactQueriesManagement";
 import Invoice from "./components/Invoice";
 import './App.css';
 import WalletPage from "@/components/wallet/WalletPage";
+import NotificationManagement from "@/components/notifications/NotificationManagement";
 
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ const adminSectionTitles = {
   categories: { title: "Category Management", subtitle: "Organize product categories" },
   subcategories: { title: "SubCategory Management", subtitle: "Manage product subcategories" },
   banners: { title: "Banner Management", subtitle: "Manage homepage banners and promotions" },
+  notifications: { title: "Notifications", subtitle: "Send push notifications to users and vendors" },
   transactions: { title: "Transactions", subtitle: "View transaction history and wallet logs" },
   wallet: { title: "Wallet", subtitle: "Balance, summary, and transaction history" },
   pages: { title: "Static Pages", subtitle: "Manage website content pages" },
@@ -107,6 +109,7 @@ const adminSectionRoutes = [
   { path: "/subcategories", key: "subcategories", element: <SubCategoryManagement /> },
   { path: "/subsubcategories", key: "subsubcategories", element: <SubSubCategoryManagement/> },
   { path: "/banners", key: "banners", element: <BannerManagement /> },
+  { path: "/notifications", key: "notifications", element: <NotificationManagement /> },
   { path: "/transactions", key: "transactions", element: <TransactionManagement /> },
   { path: "/wallet", key: "wallet", element: <WalletPage /> },
   { path: "/pages", key: "pages", element: <StaticPagesManagement /> },
