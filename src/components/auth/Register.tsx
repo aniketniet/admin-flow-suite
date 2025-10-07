@@ -442,9 +442,61 @@ const GstDetailsStep = ({
   updateFormData,
   onNext,
   isLoading,
+  setIsLoading,
   setError,
 }) => {
   const [hasGst, setHasGst] = useState(null);
+  const [verifyingGst, setVerifyingGst] = useState(false);
+  const [gstVerified, setGstVerified] = useState(false);
+
+  // Function to verify GST number
+  const verifyGstNumber = async (gstNumber) => {
+    if (!gstNumber || gstNumber.length !== 15) {
+      setError("Please enter a valid 15-digit GSTIN number");
+      return false;
+    }
+
+    setVerifyingGst(true);
+    setError("");
+
+    try {
+      // Using Shopinger GST verification API
+      const response = await fetch(`${import.meta.env.VITE_BASE_UR}public/get-gst-details/${gstNumber}`);
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Auto-fill business details from GST verification response
+        updateFormData("businessName", data.data.trade_name_of_business || data.data.legal_name_of_business || "");
+        
+        // Auto-fill address details from principal place
+        if (data.data.principal_place_split_address) {
+          const address = data.data.principal_place_split_address;
+          updateFormData("building", address.building_name || "");
+          updateFormData("street", address.street || "");
+          updateFormData("area", address.location || "");
+          updateFormData("plot_no", address.building_number || "");
+          updateFormData("city", address.district || "");
+          updateFormData("state", address.state || "");
+          updateFormData("pincode", address.pincode || "");
+        }
+        
+        setGstVerified(true);
+        toast.success("GSTIN verified successfully!");
+        return true;
+      } else {
+        setError(data.message || "Invalid GSTIN number. Please check and try again.");
+        setGstVerified(false);
+        return false;
+      }
+    } catch (err) {
+      setError("Failed to verify GSTIN. Please try again.");
+      setGstVerified(false);
+      return false;
+    } finally {
+      setVerifyingGst(false);
+    }
+  };
 
   const handleSubmit = useCallback(() => {
     if (hasGst === null) {
@@ -452,9 +504,21 @@ const GstDetailsStep = ({
       return;
     }
 
+    if (hasGst && !formData.gstinNumber) {
+      setError("Please enter your GSTIN number");
+      return;
+    }
+
+    if (hasGst && formData.gstinNumber && !gstVerified) {
+      setError("Please verify your GSTIN number first");
+      return;
+    }
+
     if (
       hasGst &&
-      (!formData.gstinNumber || formData.gstinNumber.length !== 15)
+      formData.gstinNumber && 
+      gstVerified &&
+      formData.gstinNumber.length !== 15
     ) {
       setError("Please enter a valid 15-digit GSTIN number");
       return;
@@ -466,7 +530,7 @@ const GstDetailsStep = ({
     }
 
     onNext();
-  }, [hasGst, formData.gstinNumber, formData.eidNumber, onNext, setError]);
+  }, [hasGst, formData.gstinNumber, formData.eidNumber, gstVerified, onNext, setError]);
 
   // Enter key support
   useEffect(() => {
@@ -526,26 +590,38 @@ const GstDetailsStep = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             GSTIN Number
           </label>
-          <input
-            type="text"
-            value={formData.gstinNumber}
-            onChange={(e) => updateFormData("gstinNumber", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
-            placeholder="Enter 15-digit GSTIN number"
-            maxLength={15}
-          />
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={formData.gstinNumber || ""}
+              onChange={(e) => {
+                updateFormData("gstinNumber", e.target.value.toUpperCase());
+                setGstVerified(false); // Reset verification status when GSTIN changes
+              }}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-[#FF710B] focus:border-[#FF710B]"
+              placeholder="Enter 15-digit GSTIN number"
+              maxLength={15}
+              disabled={verifyingGst}
+            />
+            <button
+              onClick={() => verifyGstNumber(formData.gstinNumber)}
+              disabled={verifyingGst || !formData.gstinNumber || formData.gstinNumber.length !== 15}
+              className="px-4 py-2 bg-[#FF710B] text-white rounded-md hover:bg-[#e65f00] disabled:opacity-50 font-medium"
+            >
+              {verifyingGst ? "Verifying..." : "Verify"}
+            </button>
+          </div>
+          
+          {gstVerified && (
+            <div className="mt-2 flex items-center text-green-600">
+              <Check className="w-4 h-4 mr-1" />
+              <span className="text-sm">GSTIN verified successfully</span>
+            </div>
+          )}
+          
           <p className="text-sm text-gray-500 mt-1">
             15-digit GST identification number
           </p>
-          {/* <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Regular GST & Composite GST sellers can register using their GSTIN number.
-              Our partner Vakilsearch can assist in obtaining a GSTIN.{" "}
-              <a href="https://www.vakilsearch.com/gst-registration" target="_blank" rel="noopener noreferrer" className="text-[#FF710B] underline">
-                Click here to learn more
-              </a>.
-            </p>
-          </div> */}
         </div>
       )}
 
@@ -614,10 +690,6 @@ const GstDetailsStep = ({
               Click here to obtain Enrolment ID/UIN
             </a>
           </div>
-
-          {/* <div className="mt-4 text-center text-sm text-gray-500">
-            <p>Need more assistance? Call us on 080 - 61799601</p>
-          </div> */}
         </div>
       )}
 
@@ -625,17 +697,14 @@ const GstDetailsStep = ({
         onClick={handleSubmit}
         disabled={
           isLoading ||
-          (hasGst === true && !formData.gstinNumber) ||
+          verifyingGst ||
+          (hasGst === true && (!formData.gstinNumber || !gstVerified)) ||
           (hasGst === false && !formData.eidNumber)
         }
         className="w-full bg-[#FF710B] text-white py-3 px-4 rounded-md hover:bg-[#e65f00] disabled:opacity-50 font-medium mt-6"
       >
         Continue
       </button>
-
-      {/* <div className="text-center text-sm text-gray-500 mt-4">
-        <p>Starting October 1st, 2023, sellers (with or without GST registration) can sell on Meesho.</p>
-      </div> */}
     </div>
   );
 };
@@ -649,135 +718,60 @@ const PickupAddressStep = ({
   setError,
 }) => {
   const [countries, setCountries] = useState([]);
-  const [states, setStates] = useState([]);
+  const [states] = useState([
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttarakhand",
+    "Uttar Pradesh",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman & Diu",
+    "Delhi",
+    "Jammu & Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry"
+  ]);
   const [loadingCountries, setLoadingCountries] = useState(true);
-  const [loadingStates, setLoadingStates] = useState(false);
   const [pincodeLoading, setPincodeLoading] = useState(false);
 
-  const fetchStates = useCallback(
-    async (countryName) => {
-      if (!countryName) {
-        setStates([]);
-        return;
-      }
-
-      setLoadingStates(true);
-      try {
-        const response = await fetch(
-          "https://countriesnow.space/api/v0.1/countries/states"
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch states");
-        }
-
-        const data = await response.json();
-
-        if (data.error === false) {
-          const country = data.data.find((c) => c.name === countryName);
-          if (country) {
-            setStates(country.states || []);
-          } else {
-            setStates([]);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching states:", error);
-        setError("Failed to load states. Please try again.");
-        setStates([]);
-      } finally {
-        setLoadingStates(false);
-      }
-    },
-    [setError]
-  );
-
   useEffect(() => {
-    const fetchCountries = async () => {
-      setLoadingCountries(true);
-      try {
-        const response = await fetch(
-          "https://countriesnow.space/api/v0.1/countries/states"
-        );
+    // Set default country to India
+    setCountries([{ name: "India" }]);
+    updateFormData("country", "India");
+    setLoadingCountries(false);
+  }, [updateFormData]);
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch countries");
-        }
-
-        const data = await response.json();
-
-        if (data.error === false) {
-          setCountries(data.data);
-
-          // Set default country if not already set
-          if (!formData.country) {
-            const defaultCountry =
-              data.data.find((c) => c.name === "India") || data.data[0];
-            if (defaultCountry) {
-              updateFormData("country", "India");
-              // Fetch states for India
-              fetchStates("India");
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching countries:", error);
-        setError("Failed to load countries. Please try again.");
-
-        // Fallback data in case API fails
-        setCountries([
-          {
-            name: "India",
-            states: [{ name: "Delhi" }, { name: "Maharashtra" }],
-          },
-          {
-            name: "United States",
-            states: [{ name: "California" }, { name: "Texas" }],
-          },
-        ]);
-      } finally {
-        setLoadingCountries(false);
-      }
-    };
-
-    fetchCountries();
-  }, [formData.country, setError, updateFormData, fetchStates]);
-
-  const handleCountryChange = (countryName) => {
-    updateFormData("country", countryName);
-    updateFormData("state", "");
-    fetchStates(countryName);
-  };
-
-  const handlePincodeChange = async (e) => {
+  const handlePincodeChange = (e) => {
     const pincode = e.target.value;
     updateFormData("pincode", pincode);
     
     // Clear previous error
     setError("");
-    
-    // If pincode is 6 digits, fetch location data
-    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
-      setPincodeLoading(true);
-      try {
-        // Using the new Shopinger API endpoint
-        const response = await fetch(`${import.meta.env.VITE_BASE_UR}public/get-pincode-details/${pincode}`);
-        const data = await response.json();
-        
-        if (data && data.success && data.data) {
-          // Auto-fill state and city/district from the new API response
-          updateFormData("state", data.data.State);
-          updateFormData("city", data.data.District);
-        } else {
-          setError("Invalid PIN code or no data found");
-        }
-      } catch (error) {
-        console.error("Error fetching pincode data:", error);
-        setError("Failed to fetch location data. Please enter state and city manually.");
-      } finally {
-        setPincodeLoading(false);
-      }
-    }
   };
   
   const handleSubmit = useCallback(() => {
@@ -799,8 +793,13 @@ const PickupAddressStep = ({
       return;
     }
 
-    if (!formData.city || !formData.state || !formData.pincode) {
-      setError("Please fill in your city, state and pincode");
+    if (!formData.city) {
+      setError("Please fill in your city/district");
+      return;
+    }
+
+    if (!formData.state) {
+      setError("Please select your state");
       return;
     }
 
@@ -972,26 +971,19 @@ const PickupAddressStep = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">
             State
           </label>
-          {loadingStates ? (
-            <div className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 animate-pulse">
-              Loading states...
-            </div>
-          ) : (
-            <select
-              value={formData.state || ""}
-              required
-              onChange={(e) => updateFormData("state", e.target.value)}
-              disabled={loadingStates}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 disabled:bg-gray-100"
-            >
-              <option value="">Select State</option>
-              {states.map((state) => (
-                <option key={state.name} value={state.name}>
-                  {state.name}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            value={formData.state || ""}
+            required
+            onChange={(e) => updateFormData("state", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
+          >
+            <option value="">Select State</option>
+            {states.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1168,110 +1160,9 @@ const SupplierDetailsStep = ({
   setIsLoading,
   setError,
 }) => {
-  const [pincodeLoading, setPincodeLoading] = useState(false);
-  const [states, setStates] = useState([]);
-
-  const fetchStates = useCallback(async () => {
-    try {
-      const response = await fetch(
-        "https://countriesnow.space/api/v0.1/countries/states"
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch states");
-      }
-
-      const data = await response.json();
-
-      if (data.error === false) {
-        const country = data.data.find((c) => c.name === "India");
-        if (country) {
-          setStates(country.states || []);
-        } else {
-          setStates([]);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching states:", error);
-      setStates([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStates();
-  }, [fetchStates]);
-
-  const handlePincodeChange = async (e) => {
-    const pincode = e.target.value;
-    updateFormData("pincode", pincode);
-    
-    // Clear previous error
-    setError("");
-    
-    // If pincode is 6 digits, fetch location data
-    if (pincode.length === 6 && /^\d{6}$/.test(pincode)) {
-      setPincodeLoading(true);
-      try {
-        // Using a CORS proxy to avoid CORS issues
-        const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        const targetUrl = `http://www.postalpincode.in/api/pincode/${pincode}`;
-        const response = await fetch(proxyUrl + targetUrl);
-        const data = await response.json();
-        
-        if (data && data.Status === "Success" && data.PostOffice && data.PostOffice.length > 0) {
-          // Use the first post office data to auto-fill fields
-          const postOffice = data.PostOffice[0];
-          
-          // Auto-fill state and city/district
-          updateFormData("state", postOffice.State);
-          updateFormData("city", postOffice.District);
-        } else {
-          setError("Invalid PIN code or no data found");
-        }
-      } catch (error) {
-        console.error("Error fetching pincode data:", error);
-        // Fallback: Try without CORS proxy
-        try {
-          const response = await fetch(`http://www.postalpincode.in/api/pincode/${pincode}`);
-          const data = await response.json();
-          
-          if (data && data.Status === "Success" && data.PostOffice && data.PostOffice.length > 0) {
-            const postOffice = data.PostOffice[0];
-            updateFormData("state", postOffice.State);
-            updateFormData("city", postOffice.District);
-          } else {
-            setError("Invalid PIN code or no data found");
-          }
-        } catch (fallbackError) {
-          setError("Failed to fetch location data. Please enter state and city manually.");
-        }
-      } finally {
-        setPincodeLoading(false);
-      }
-    }
-  };
-
   const handleSubmit = useCallback(async () => {
     if (!formData.businessName || !formData.supplierName) {
       setError("Please fill in your business and supplier name");
-      return;
-    }
-    if (!formData.city || !formData.state || !formData.pincode) {
-      setError("Please fill in your city, state and pincode");
-      return;
-    }
-
-    if (!formData.pincode || formData.pincode.length !== 6) {
-      setError("Please enter a valid 6-digit PIN code");
-      return;
-    }
-
-    if (!formData.plot_no) {
-      setError("Please fill in your plot number");
-      return;
-    }
-    if (isNaN(Number(formData.plot_no))) {
-      setError("Plot number must be a number");
       return;
     }
 
@@ -1368,10 +1259,6 @@ const SupplierDetailsStep = ({
   }, [
     formData.businessName,
     formData.supplierName,
-    formData.plot_no,
-    formData.city,
-    formData.state,
-    formData.pincode,
     isLoading,
     handleSubmit,
   ]);
@@ -1418,84 +1305,12 @@ const SupplierDetailsStep = ({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mt-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            PIN Code
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={formData.pincode || ""}
-              required
-              onChange={handlePincodeChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-              placeholder="6-digit PIN code"
-              maxLength={6}
-            />
-            {pincodeLoading && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="w-4 h-4 border-t-2 border-pink-500 border-solid rounded-full animate-spin"></div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            City/District
-          </label>
-          <input
-            type="text"
-            required
-            value={formData.city || ""}
-            onChange={(e) => updateFormData("city", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-            placeholder="City"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            State
-          </label>
-          <select
-            value={formData.state || ""}
-            required
-            onChange={(e) => updateFormData("state", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500"
-          >
-            <option value="">Select State</option>
-            {states.map((state) => (
-              <option key={state.name} value={state.name}>
-                {state.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Country
-          </label>
-          <select
-            value="India"
-            required
-            disabled
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 bg-gray-100"
-          >
-            <option value="India">India</option>
-          </select>
-        </div>
-      </div>
-
       <button
         onClick={handleSubmit}
-        disabled={isLoading || pincodeLoading}
+        disabled={isLoading}
         className="w-full bg-black text-white py-3 px-4 rounded-md hover:bg-[#FF710B] disabled:opacity-50 font-medium"
       >
-        {isLoading || pincodeLoading ? "Submitting..." : "Complete Registration"}
+        {isLoading ? "Submitting..." : "Complete Registration"}
       </button>
     </div>
   );
@@ -1642,6 +1457,7 @@ const ShopingerRegistration = () => {
       </div>
     </div>
   );
+  
   const renderStep = () => {
     const commonProps = {
       formData,

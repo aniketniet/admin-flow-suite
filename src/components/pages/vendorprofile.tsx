@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { useParams } from "react-router-dom";
 import {toast} from "sonner";
@@ -9,12 +9,18 @@ const VendorProfile = () => {
   const { vendorId } = useParams();
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [verifyingVendor, setVerifyingVendor] = useState(false);
+  const [togglingStatus, setTogglingStatus] = useState(false);
   const token = Cookies.get("admin_token");
 
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!vendorId) {
+        toast.error("Invalid vendor ID");
+        setLoading(false);
+        return;
+      }
+      
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_BASE_UR}admin/get-vendor/${vendorId}`,
@@ -26,9 +32,17 @@ const VendorProfile = () => {
         );
         setUserData(response.data.vendor);
         setLoading(false);
-      } catch (err: any) {
-        setError(err.message || "Failed to fetch vendor data");
-        toast.error(err.message || "Failed to fetch vendor data");
+      } catch (err: unknown) {
+        // Extract error message from axios error response if available
+        let errorMessage = "Failed to fetch vendor data";
+        if (axios.isAxiosError(err)) {
+          errorMessage = err.response?.data?.message || err.message || errorMessage;
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        
+        // Show error in toast only
+        toast.error(errorMessage);
         setLoading(false);
       }
     };
@@ -37,14 +51,57 @@ const VendorProfile = () => {
   }, [vendorId, token]);
 
 
+  // Dedicated function for verifying vendors (using update status API)
+  const verifyVendor = async () => {
+    if (!userData) return;
+
+    setVerifyingVendor(true);
+    try {
+      // Using URLSearchParams as required by the API
+      const params = new URLSearchParams();
+      params.append('id', userData.id.toString());
+      
+      const response = await axios.put(
+        `${import.meta.env.VITE_BASE_UR}admin/update-vendor-status`,
+        params,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+        }
+      );
+
+      setUserData(response.data.vendor);
+      toast.success("Vendor verified successfully");
+    } catch (err: unknown) {
+      // Extract error message from axios error response if available
+      let errorMessage = "Failed to verify vendor";
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || err.message || errorMessage;
+        // Handle specific case where vendor is already verified
+        if (err.response?.status === 400 && err.response?.data?.message?.includes("already")) {
+          errorMessage = "Vendor is already verified";
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      // Show error in toast only
+      toast.error(errorMessage);
+    } finally {
+      setVerifyingVendor(false);
+    }
+  };
+
   const updateVendorStatus = async () => {
     if (!userData) return;
 
-    setUpdatingStatus(true);
+    setTogglingStatus(true);
     try {
       const response = await axios.put(
-        `${import.meta.env.VITE_BASE_UR}admin/update-vendor-status`,
-        { id: vendorId },
+        `${import.meta.env.VITE_BASE_UR}admin/active-inactive-vendor/${userData.id}`,
+        {},
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -55,39 +112,48 @@ const VendorProfile = () => {
 
       setUserData(response.data.vendor);
       toast.success("Vendor status updated successfully");
-    } catch (err: any) {
-      setError(err.message || "Failed to update vendor status");
-      toast.error(err.message || "Failed to update vendor status");
+    } catch (err: unknown) {
+      // Extract error message from axios error response if available
+      let errorMessage = "Failed to update vendor status";
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || err.message || errorMessage;
+        // Handle specific case where operation is not allowed
+        if (err.response?.status === 400 && err.response?.data?.message?.includes("already")) {
+          errorMessage = "Vendor status is already set to this value";
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      
+      // Show error in toast only
+      toast.error(errorMessage);
     } finally {
-      setUpdatingStatus(false);
+      setTogglingStatus(false);
     }
   };
 
-  if (error) {
+  if (loading) {
     return (
       <div className="flex h-screen">
-        {/* <Sidebar
-          activeSection="userProfile"
-          onSectionChange={(section) => console.log(section)}
-        /> */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto">
-          {/* <Header title="User Profile" /> */}
           <div className="p-6">
-            <div
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-              role="alert"
-            >
-              <strong className="font-bold">Error: </strong>
-              <span className="block sm:inline">{error}</span>
+            <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-xl p-6">
+              <div className="text-center py-12">
+                <div className="text-gray-500 text-xl font-semibold mb-4">Loading Vendor Data...</div>
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+              </div>
             </div>
-          
           </div>
         </div>
       </div>
     );
   }
 
-  if (!userData) {
+  if (!userData && !loading) {
+    toast.error("No vendor data found");
+    // Redirect to vendor list or show a more user-friendly message
     return (
       <div className="flex h-screen">
         {/* <Sidebar
@@ -97,14 +163,18 @@ const VendorProfile = () => {
         <div className="flex-1 overflow-x-hidden overflow-y-auto">
           {/* <Header title="User Profile" /> */}
           <div className="p-6">
-            <div
-              className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative"
-              role="alert"
-            >
-              <strong className="font-bold">Warning: </strong>
-              <span className="block sm:inline">No user data found</span>
+            <div className="max-w-5xl mx-auto bg-white rounded-lg shadow-xl p-6">
+              <div className="text-center py-12">
+                <div className="text-gray-500 text-xl font-semibold mb-4">No Vendor Data Found</div>
+                <p className="text-gray-600 mb-6">The requested vendor information could not be found.</p>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Retry
+                </button>
+              </div>
             </div>
-         
           </div>
         </div>
       </div>
@@ -114,8 +184,8 @@ const VendorProfile = () => {
   // Get default address if exists
   // Get default pickup address if exists
   const defaultAddress =
-    userData.pickupAddresses && userData.pickupAddresses.length > 0
-      ? userData.pickupAddresses[0]
+    userData?.pickupAddresses && userData?.pickupAddresses.length > 0
+      ? userData?.pickupAddresses[0]
       : null;
 
   return (
@@ -155,42 +225,110 @@ const VendorProfile = () => {
                 </div> */}
                 <div className="ml-6">
                   <h1 className="text-2xl font-bold text-gray-800">
-                    {userData.name}
+                    {userData?.name || "Unknown Vendor"}
                   </h1>
-                  <p className="text-gray-600">{userData.email}</p>
+                  <p className="text-gray-600">{userData?.email || "No email provided"}</p>
                   <div className="flex items-center mt-2">
                     <span
                       className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                        userData.role === "ADMIN"
+                        userData?.role === "ADMIN"
                           ? "bg-purple-100 text-purple-800"
                           : "bg-gray-100 text-gray-800"
                       }`}
                     >
-                      {userData.role}
+                      {userData?.role || "VENDOR"}
                     </span>
                     <span
                       className={`inline-block ml-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                        userData.status === "ACTIVE"
+                        userData?.status && userData.status.toUpperCase() === "ACTIVE"
                           ? "bg-green-100 text-green-800"
                           : "bg-red-100 text-red-800"
                       }`}
                     >
-                      {userData.status}
+                      {userData?.status || "UNKNOWN"}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="flex space-x-3">
+                {/* Show Verified badge when vendor is active, otherwise show Verify button */}
+                {userData?.status && userData.status.toUpperCase() === "ACTIVE" ? (
+                  <span className="inline-flex items-center px-4 py-2 rounded-lg bg-green-100 text-green-800 font-medium">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 mr-2"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Verified
+                  </span>
+                ) : (
+                  <button
+                    onClick={verifyVendor}
+                    disabled={verifyingVendor || !userData}
+                    className={`px-4 py-2 rounded-lg transition flex items-center bg-blue-600 hover:bg-blue-700 text-white ${verifyingVendor ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    {verifyingVendor ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 mr-2"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        Verify
+                      </>
+                    )}
+                  </button>
+                )}
+                
+                {/* Active/Inactive toggle button */}
                 <button
                   onClick={updateVendorStatus}
-                  disabled={updatingStatus}
+                  disabled={togglingStatus || !userData}
                   className={`px-4 py-2 rounded-lg transition flex items-center ${
-                    userData.status === "ACTIVE"
+                    userData?.status && userData.status.toUpperCase() === "ACTIVE"
                       ? "bg-red-600 hover:bg-red-700 text-white"
                       : "bg-green-600 hover:bg-green-700 text-white"
-                  } ${updatingStatus ? "opacity-50 cursor-not-allowed" : ""}`}
+                  } ${togglingStatus ? "opacity-50 cursor-not-allowed" : ""}`}
                 >
-                  {updatingStatus ? (
+                  {togglingStatus ? (
                     <>
                       <svg
                         className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
@@ -228,7 +366,7 @@ const VendorProfile = () => {
                           clipRule="evenodd"
                         />
                       </svg>
-                      {userData.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                      {userData?.status && userData.status.toUpperCase() === "ACTIVE" ? "Deactivate" : "Activate"}
                     </>
                   )}
                 </button>
@@ -266,7 +404,7 @@ const VendorProfile = () => {
                       User Role
                     </p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {userData.role}
+                      {userData?.role || "Unknown"}
                     </p>
                   </div>
                   <div className="bg-blue-100 p-3 rounded-full">
@@ -295,13 +433,13 @@ const VendorProfile = () => {
                       Member Since
                     </p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {new Date(userData.createdAt).toLocaleDateString(
+                      {userData?.createdAt ? new Date(userData.createdAt).toLocaleDateString(
                         "en-US",
                         {
                           year: "numeric",
                           month: "short",
                         }
-                      )}
+                      ) : "Unknown"}
                     </p>
                   </div>
                   <div className="bg-green-100 p-3 rounded-full">
@@ -330,14 +468,14 @@ const VendorProfile = () => {
                       Last Updated
                     </p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {new Date(userData.updatedAt).toLocaleDateString(
+                      {userData?.updatedAt ? new Date(userData.updatedAt).toLocaleDateString(
                         "en-US",
                         {
                           year: "numeric",
                           month: "short",
                           day: "numeric",
                         }
-                      )}
+                      ) : "Unknown"}
                     </p>
                   </div>
                   <div className="bg-purple-100 p-3 rounded-full">
@@ -361,14 +499,14 @@ const VendorProfile = () => {
 
               <div
                 className={`p-4 rounded-lg ${
-                  userData.status === "ACTIVE" ? "bg-green-50" : "bg-red-50"
+                  userData?.status && userData.status.toUpperCase() === "ACTIVE" ? "bg-green-50" : "bg-red-50"
                 }`}
               >
                 <div className="flex justify-between items-center">
                   <div>
                     <p
                       className={`text-sm font-medium ${
-                        userData.status === "ACTIVE"
+                        userData?.status && userData.status.toUpperCase() === "ACTIVE"
                           ? "text-green-600"
                           : "text-red-600"
                       }`}
@@ -376,12 +514,12 @@ const VendorProfile = () => {
                       Account Status
                     </p>
                     <p className="text-2xl font-bold text-gray-800">
-                      {userData.status}
+                      {userData?.status || "Unknown"}
                     </p>
                   </div>
                   <div
                     className={`p-3 rounded-full ${
-                      userData.status === "ACTIVE"
+                      userData?.status && userData.status.toUpperCase() === "ACTIVE"
                         ? "bg-green-100"
                         : "bg-red-100"
                     }`}
@@ -389,7 +527,7 @@ const VendorProfile = () => {
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className={`h-6 w-6 ${
-                        userData.status === "ACTIVE"
+                        userData?.status && userData.status.toUpperCase() === "ACTIVE"
                           ? "text-green-600"
                           : "text-red-600"
                       }`}
@@ -397,7 +535,7 @@ const VendorProfile = () => {
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                     >
-                      {userData.status === "ACTIVE" ? (
+                      {userData?.status && userData.status.toUpperCase() === "ACTIVE" ? (
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -427,35 +565,35 @@ const VendorProfile = () => {
                 <div className="space-y-4">
                   <div>
                   <p className="text-sm text-gray-500">Full Name</p>
-                  <p className="font-medium text-gray-800">{userData.name}</p>
+                  <p className="font-medium text-gray-800">{userData?.name || "N/A"}</p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Email Address</p>
                   <p className="font-medium text-gray-800">
-                    {userData.email}
+                    {userData?.email || "N/A"}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Mobile</p>
                   <p className="font-medium text-gray-800">
-                    {userData.phone || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.phone || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">User Role</p>
-                  <p className="font-medium text-gray-800">{userData.role}</p>
+                  <p className="font-medium text-gray-800">{userData?.role || "N/A"}</p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Account Status</p>
                   <p className="font-medium text-gray-800">
                     <span
                     className={`px-2 py-1 rounded text-xs ${
-                      userData.status === "ACTIVE"
+                      userData?.status && userData.status.toUpperCase() === "ACTIVE"
                       ? "bg-green-100 text-green-800"
                       : "bg-red-100 text-red-800"
                     }`}
                     >
-                    {userData.status}
+                    {userData?.status || "N/A"}
                     </span>
                   </p>
                   </div>
@@ -463,37 +601,37 @@ const VendorProfile = () => {
                   <div>
                   <p className="text-sm text-gray-500">GST Number</p>
                   <p className="font-medium text-gray-800">
-                    {userData.gst_no || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.gst_no || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">EID Number</p>
                   <p className="font-medium text-gray-800">
-                    {userData.eid_no || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.eid_no || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Bank Name</p>
                   <p className="font-medium text-gray-800">
-                    {userData.bank_name || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.bank_name || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Bank Account No</p>
                   <p className="font-medium text-gray-800">
-                    {userData.bank_account_no || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.bank_account_no || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                   <div>
                   <p className="text-sm text-gray-500">Bank IFSC</p>
                   <p className="font-medium text-gray-800">
-                    {userData.bank_ifsc || <span className="italic text-gray-400">N/A</span>}
+                    {userData?.bank_ifsc || <span className="italic text-gray-400">N/A</span>}
                   </p>
                   </div>
                     <div>
                   <p className="text-sm text-gray-500">Account Created</p>
                   <p className="font-medium text-gray-800">
-                    {new Date(userData.createdAt).toLocaleString()}
+                    {userData?.createdAt ? new Date(userData.createdAt).toLocaleString() : "N/A"}
                   </p>
                   </div>
 
@@ -509,39 +647,38 @@ const VendorProfile = () => {
                     <div>
                       <p className="text-sm text-gray-500">Street Address</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.address}
+                        {defaultAddress.address || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Country</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.country}
+                        {defaultAddress.country || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">State</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.state}
+                        {defaultAddress.state || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">City</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.city}
+                        {defaultAddress.city || "N/A"}
                       </p>
                     </div>
                   
                     <div>
                       <p className="text-sm text-gray-500">Pincode</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.pin_code}
+                        {defaultAddress.pin_code || "N/A"}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">PickUp Location</p>
                       <p className="font-medium text-gray-800">
-                        {defaultAddress.pickup_location
-                        }
+                        {defaultAddress.pickup_location || "N/A"}
                       </p>
                     </div>
                   </div>

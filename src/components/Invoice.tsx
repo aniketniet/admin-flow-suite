@@ -259,9 +259,7 @@ const InvoicePreview = ({ order, onClose }) => {
           <div className="flex justify-between items-start mb-4">
             <div className="text-left">
               <img src={logo} alt="Logo" className="w-48 mb-2" />
-              <h1 className="text-2xl font-bold">{soldBy.name}</h1>
-              <p className="text-sm">{soldBy.address}</p>
-              <p className="text-sm">State: {vendorState}</p>
+           
             </div>
             <div className="text-right">
               <h1 className="text-xl font-bold">
@@ -288,14 +286,14 @@ const InvoicePreview = ({ order, onClose }) => {
             </div>
             <div className="text-sm">
               <div className="mb-4">
-                <p className="font-bold">Billing Address :</p>
+                <p className="font-bold">Billing/Shipping Address :</p>
                 <p>{billingAddress.name}</p>
                 <p>{billingAddress.address}</p>
                 <p>
                   <span className="font-bold">State:</span> {customerState}
                 </p>
               </div>
-
+{/* 
               <div className="mt-4">
                 <p>
                   <span className="font-bold">Place of supply:</span>{" "}
@@ -305,7 +303,7 @@ const InvoicePreview = ({ order, onClose }) => {
                   <span className="font-bold">Place of delivery:</span>{" "}
                   {shippingAddress.placeOfDelivery}
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
 
