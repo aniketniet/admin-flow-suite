@@ -49,6 +49,7 @@ const UpdateProductManagement = () => {
         sku: "",
         price: "",
         stock: "",
+        sellingpriceWithoutCommission: "",
         sellingprice: "",
         originalPrice: "",
         attributes: [{ key: "size", value: "" }],
@@ -140,6 +141,7 @@ const UpdateProductManagement = () => {
   const [subSubCategories, setSubSubCategories] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [commission, setCommission] = useState<number | null>(null);
 
   const token = Cookies.get("admin_token") || Cookies.get("vendor_token");
   const role = Cookies.get("user_role");
@@ -263,6 +265,7 @@ const UpdateProductManagement = () => {
                   originalPrice: variant.originalPrice?.toString() || "",
                   stock: variant.stock?.toString() || "",
                   sellingprice: variant.sellingprice?.toString() || "",
+                  sellingpriceWithoutCommission: variant.sellingpriceWithoutCommission?.toString() || "",
                   attributes: variant.attributes || [
                     { key: "size", value: "" },
                   ],
@@ -301,13 +304,15 @@ const UpdateProductManagement = () => {
 
         setMainCategories(mainCategoriesResponse.data.categories || []);
 
-        // If product has main category, fetch its subcategories
+        // If product has main category, fetch its subcategories and set commission
         if (productData.mainCategoryId) {
           const selectedMainCategory =
             mainCategoriesResponse.data.categories.find(
               (cat) => cat.id === productData.mainCategoryId
             );
           setSubCategories(selectedMainCategory?.subCategories || []);
+          // Set commission from the selected main category
+          setCommission(selectedMainCategory?.commission ?? null);
 
           // If product has sub category, fetch its sub-subcategories
           if (productData.subCategoryId) {
@@ -342,60 +347,60 @@ const UpdateProductManagement = () => {
   }, [id, token, isAdmin]);
 
   // Only auto-update sellingprice if it hasn't been manually edited AND it's a new variant (not loaded from API)
-  useEffect(() => {
-    if (product.variants.length > 0 && product.mainCategoryId) {
-      const selectedMainCategory = mainCategories.find(
-        (cat) => cat.id === parseInt(product.mainCategoryId)
-      );
-      const sgstRate = selectedMainCategory?.sgst || 0;
-      const cgstRate = selectedMainCategory?.cgst || 0;
+  // useEffect(() => {
+  //   if (product.variants.length > 0 && product.mainCategoryId) {
+  //     const selectedMainCategory = mainCategories.find(
+  //       (cat) => cat.id === parseInt(product.mainCategoryId)
+  //     );
+  //     const sgstRate = selectedMainCategory?.sgst || 0;
+  //     const cgstRate = selectedMainCategory?.cgst || 0;
 
-      const updatedVariants = product.variants.map((variant) => {
-        const originalPrice = parseFloat(variant.originalPrice) || 0;
-        const sgst = (originalPrice * (sgstRate / 100)).toFixed(2);
-        const cgst = (originalPrice * (cgstRate / 100)).toFixed(2);
-        const sgstRounded = Math.ceil(parseFloat(sgst));
-        const cgstRounded = Math.ceil(parseFloat(cgst));
-        const totalPrice = (originalPrice + sgstRounded + cgstRounded).toFixed(
-          2
-        );
+  //     const updatedVariants = product.variants.map((variant) => {
+  //       const originalPrice = parseFloat(variant.originalPrice) || 0;
+  //       const sgst = (originalPrice * (sgstRate / 100)).toFixed(2);
+  //       const cgst = (originalPrice * (cgstRate / 100)).toFixed(2);
+  //       const sgstRounded = Math.ceil(parseFloat(sgst));
+  //       const cgstRounded = Math.ceil(parseFloat(cgst));
+  //       const totalPrice = (originalPrice + sgstRounded + cgstRounded).toFixed(
+  //         2
+  //       );
 
-        // Only auto-update sellingprice if it hasn't been manually edited (isManualEdit not true)
-        // If sellingprice is set from API, keep it as is unless user changes originalPrice and hasn't manually edited sellingprice
-        let sellingprice = variant.sellingprice;
-        if (
-          (!variant.isManualEdit ||
-            variant.sellingprice === "" ||
-            variant.sellingprice == null) &&
-          (!("id" in variant) ||
-            variant.sellingprice === "" ||
-            variant.sellingprice == null)
-        ) {
-          sellingprice = variant.sellingprice;
-        }
+  //       // Only auto-update sellingprice if it hasn't been manually edited (isManualEdit not true)
+  //       // If sellingprice is set from API, keep it as is unless user changes originalPrice and hasn't manually edited sellingprice
+  //       let sellingprice = variant.sellingprice;
+  //       if (
+  //         (!variant.isManualEdit ||
+  //           variant.sellingprice === "" ||
+  //           variant.sellingprice == null) &&
+  //         (!("id" in variant) ||
+  //           variant.sellingprice === "" ||
+  //           variant.sellingprice == null)
+  //       ) {
+  //         sellingprice = variant.sellingprice;
+  //       }
 
-        return {
-          ...variant,
-          sgst,
-          cgst,
-          price: totalPrice, // Always keep price updated
-          sellingprice,
-        };
-      });
+  //       return {
+  //         ...variant,
+  //         sgst,
+  //         cgst,
+  //         price: totalPrice, // Always keep price updated
+  //         sellingprice,
+  //       };
+  //     });
 
-      // Only update if sgst/cgst/price changed, but don't overwrite sellingprice if manually edited
-      const isChanged = updatedVariants.some(
-        (v, i) =>
-          v.price !== product.variants[i].price ||
-          v.sgst !== product.variants[i].sgst ||
-          v.cgst !== product.variants[i].cgst
-      );
+  //     // Only update if sgst/cgst/price changed, but don't overwrite sellingprice if manually edited
+  //     const isChanged = updatedVariants.some(
+  //       (v, i) =>
+  //         v.price !== product.variants[i].price ||
+  //         v.sgst !== product.variants[i].sgst ||
+  //         v.cgst !== product.variants[i].cgst
+  //     );
 
-      if (isChanged) {
-        setProduct((prev) => ({ ...prev, variants: updatedVariants }));
-      }
-    }
-  }, [product.variants, product.mainCategoryId, mainCategories]);
+  //     if (isChanged) {
+  //       setProduct((prev) => ({ ...prev, variants: updatedVariants }));
+  //     }
+  //   }
+  // }, [product.variants, product.mainCategoryId, mainCategories]);
 
   useEffect(() => {
     // When main category changes, update sub categories
@@ -405,6 +410,8 @@ const UpdateProductManagement = () => {
       );
       setSubCategories(selectedMainCategory?.subCategories || []);
       setSubSubCategories([]);
+      // Update commission from selected main category
+      setCommission(selectedMainCategory?.commission ?? null);
       if (selectedMainCategory?.subCategories?.length === 0) {
         setProduct((prev) => ({
           ...prev,
@@ -441,8 +448,24 @@ const UpdateProductManagement = () => {
     setProduct((prev) => {
       const updatedVariants = [...prev.variants];
 
+      // Handle sellingpriceWithoutCommission separately - auto-calculate sellingprice
+      if (name === "sellingpriceWithoutCommission") {
+        const withoutCommission = parseFloat(value || "0");
+        let calculatedSellingPrice = "";
+        
+        if (withoutCommission > 0 && commission !== null && commission > 0) {
+          const finalPrice = withoutCommission + (withoutCommission * commission / 100);
+          calculatedSellingPrice = finalPrice.toFixed(2);
+        }
+        
+        updatedVariants[variantIndex] = {
+          ...updatedVariants[variantIndex],
+          sellingpriceWithoutCommission: value,
+          sellingprice: calculatedSellingPrice,
+        };
+      }
       // If sellingprice is manually changed, mark it as edited
-      if (name === "sellingprice") {
+      else if (name === "sellingprice") {
         updatedVariants[variantIndex] = {
           ...updatedVariants[variantIndex],
           [name]: value,
@@ -481,6 +504,7 @@ const UpdateProductManagement = () => {
           price: "",
           stock: "",
           originalPrice: "",
+          sellingpriceWithoutCommission: "",
           sellingprice: "",
           attributes: [{ key: "size", value: "" }],
           images: [],
@@ -587,11 +611,13 @@ const UpdateProductManagement = () => {
       }
       
       // Prepare variants data with existing images if no new images are uploaded
+      // Exclude sellingpriceWithoutCommission from API payload
       const variantsData = product.variants.map((variant) => {
+        const {  ...variantData } = variant;
         return {
-          ...variant,
+          ...variantData,
           // If no new images are uploaded, keep the existing images
-          images: variant.images || [],
+          images: variantData.images || [],
         };
       });
 
@@ -906,7 +932,7 @@ const UpdateProductManagement = () => {
                             htmlFor={`sku-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            Varient Name <span className="text-red-500">*</span>
+                            Variant Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -971,10 +997,44 @@ const UpdateProductManagement = () => {
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
                           <label
+                            htmlFor={`sellingpriceWithoutCommission-${variantIndex}`}
+                            className="block text-sm font-medium text-gray-700 mt-2"
+                          >
+                            Selling Price (Without Commission){" "}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">
+                                ₹
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              id={`sellingpriceWithoutCommission-${variantIndex}`}
+                              name="sellingpriceWithoutCommission"
+                              value={variant.sellingpriceWithoutCommission || ""}
+                              onChange={(e) =>
+                                handleVariantChange(variantIndex, e)
+                              }
+                              required
+                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500"
+                              placeholder="0.00"
+                              min="0"
+                            />
+                          </div>
+                          {commission && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Enter base price (commission will be added automatically)
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label
                             htmlFor={`sellingprice-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700 mt-2"
                           >
-                            Selling Price{" "}
+                            Selling Price (With Commission){" "}
                             <span className="text-red-500">*</span>
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
@@ -992,11 +1052,21 @@ const UpdateProductManagement = () => {
                                 handleVariantChange(variantIndex, e)
                               }
                               required
-                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3"
+                              readOnly={commission !== null && !!variant.sellingpriceWithoutCommission}
+                              className={`border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 ${
+                                commission !== null && !!variant.sellingpriceWithoutCommission
+                                  ? "bg-gray-100 cursor-not-allowed"
+                                  : "focus:outline-none focus:ring-gold-500 focus:border-gold-500"
+                              }`}
                               placeholder="0.00"
                               min="0"
                             />
                           </div>
+                          {commission && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Admin commission: {commission}%
+                            </p>
+                          )}
                         </div>
 
                         <div>

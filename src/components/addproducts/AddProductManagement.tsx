@@ -12,15 +12,15 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Define types for our product state
 interface Attribute {
@@ -28,11 +28,18 @@ interface Attribute {
   value: string;
 }
 
+// Add this interface for our AI description response
+interface AIDescriptionResponse {
+  success: boolean;
+  data: string;
+}
+
 interface Category {
   id: number;
   name: string;
   sgst?: number;
   cgst?: number;
+  commission?: number;
   subCategories?: SubCategory[];
 }
 
@@ -57,12 +64,12 @@ interface Variant {
   price: string;
   stock: string;
   originalPrice: string;
-  sellingprice: string;
+  sellingpriceWithoutCommission?: string; // User enters this
+  sellingprice: string; // Auto-calculated from sellingpriceWithoutCommission + commission
   attributes: Attribute[];
   images: File[];
-  sgst?: string;
-  cgst?: string;
   isManualEdit?: boolean;
+  isPriceManualEdit?: boolean;
   height?: string;
   weight?: string;
 }
@@ -107,9 +114,26 @@ interface JoditConfig {
 }
 
 // Create a sortable item component for images
-const SortableImageItem = ({ id, image, index, onRemove }: { id: number; image: File; index: number; onRemove: (index: number) => void }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  
+const SortableImageItem = ({
+  id,
+  image,
+  index,
+  onRemove,
+}: {
+  id: number;
+  image: File;
+  index: number;
+  onRemove: (index: number) => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -117,19 +141,24 @@ const SortableImageItem = ({ id, image, index, onRemove }: { id: number; image: 
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      className="relative group"
-    >
+    <div ref={setNodeRef} style={style} className="relative group">
       <div className="flex items-center space-x-2 bg-gray-100 p-2 rounded">
-        <div 
-          {...attributes} 
+        <div
+          {...attributes}
           {...listeners}
           className="cursor-grab active:cursor-grabbing p-1"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 text-gray-400"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
         <img
@@ -142,8 +171,17 @@ const SortableImageItem = ({ id, image, index, onRemove }: { id: number; image: 
           onClick={() => onRemove(index)}
           className="text-red-500 hover:text-red-700"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
       </div>
@@ -166,6 +204,7 @@ const AddProductManagement = () => {
         price: "",
         stock: "",
         originalPrice: "",
+        sellingpriceWithoutCommission: "",
         sellingprice: "",
         attributes: [{ key: "Size", value: "" }],
         images: [],
@@ -251,8 +290,11 @@ const AddProductManagement = () => {
   const [success, setSuccess] = useState(false);
   const [mainCategories, setMainCategories] = useState<Category[]>([]);
   const [subCategories, setSubCategories] = useState<SubCategory[]>([]);
-  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>([]);
+  const [subSubCategories, setSubSubCategories] = useState<SubSubCategory[]>(
+    []
+  );
   const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [commission, setCommission] = useState<number | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const role = Cookies.get("user_role");
@@ -305,56 +347,9 @@ const AddProductManagement = () => {
     };
 
     fetchData();
-  }, []);
+  }, [isAdmin, token]);
 
-  // calculate sgst and cgst to original price and fill in selling price and price
-  // console.log("mainCategories", mainCategories);
-
-  useEffect(() => {
-    if (product.variants.length > 0 && product.mainCategoryId) {
-      const selectedMainCategory = mainCategories.find(
-        (cat) => cat.id === parseInt(product.mainCategoryId)
-      );
-      const sgstRate = selectedMainCategory?.sgst || 0;
-      const cgstRate = selectedMainCategory?.cgst || 0;
-
-      const updatedVariants = product.variants.map((variant) => {
-        const originalPrice = parseFloat(variant.originalPrice) || 0;
-        const sgst = (originalPrice * (sgstRate / 100)).toFixed(2);
-        const cgst = (originalPrice * (cgstRate / 100)).toFixed(2);
-        const sgstRounded = Math.ceil(parseFloat(sgst));
-        const cgstRounded = Math.ceil(parseFloat(cgst));
-        const totalPrice = (originalPrice + sgstRounded + cgstRounded).toFixed(
-          2
-        );
-
-        // Only auto-update sellingprice if it hasn't been manually edited
-        const sellingprice = variant.isManualEdit
-          ? variant.sellingprice
-          : totalPrice;
-
-        return {
-          ...variant,
-          sgst,
-          cgst,
-          sellingprice,
-          price: totalPrice, // Always keep price updated (for reference)
-        } as Variant;
-      });
-
-      const isChanged = updatedVariants.some(
-        (v, i) =>
-          v.price !== product.variants[i].price ||
-          v.sgst !== product.variants[i].sgst ||
-          v.cgst !== product.variants[i].cgst ||
-          v.sellingprice !== product.variants[i].sellingprice
-      );
-
-      if (isChanged) {
-        setProduct((prev) => ({ ...prev, variants: updatedVariants }));
-      }
-    }
-  }, [product.variants, product.mainCategoryId, mainCategories]);
+  // Prices are fully manual now; removed category tax-based auto calculation.
 
   useEffect(() => {
     // When main category changes, update sub categories
@@ -363,6 +358,8 @@ const AddProductManagement = () => {
         (cat) => cat.id === parseInt(product.mainCategoryId)
       );
       setSubCategories(selectedMainCategory?.subCategories || []);
+      // Update commission from selected main category for display beneath Selling Price
+      setCommission(selectedMainCategory?.commission ?? null);
       setProduct((prev) => ({
         ...prev,
         subCategoryId: "",
@@ -385,22 +382,53 @@ const AddProductManagement = () => {
     }
   }, [product.subCategoryId, subCategories]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
     setProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleVariantChange = (variantIndex: number, e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleVariantChange = (
+    variantIndex: number,
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
     setProduct((prev) => {
       const updatedVariants = [...prev.variants];
 
-      // If sellingprice is manually changed, mark it as edited
-      if (name === "sellingprice") {
+      // Handle sellingpriceWithoutCommission separately - auto-calculate sellingprice
+      if (name === "sellingpriceWithoutCommission") {
+        const withoutCommission = parseFloat(value || "0");
+        let calculatedSellingPrice = "";
+        
+        if (withoutCommission > 0 && commission !== null && commission > 0) {
+          const finalPrice = withoutCommission + (withoutCommission * commission / 100);
+          calculatedSellingPrice = finalPrice.toFixed(2);
+        }
+        
+        updatedVariants[variantIndex] = {
+          ...updatedVariants[variantIndex],
+          sellingpriceWithoutCommission: value,
+          sellingprice: calculatedSellingPrice,
+        } as Variant;
+      }
+      // Mark fields as manually edited
+      else if (name === "sellingprice") {
         updatedVariants[variantIndex] = {
           ...updatedVariants[variantIndex],
           [name]: value,
           isManualEdit: true, // Mark as manually edited
+        } as Variant;
+      } else if (name === "price") {
+        updatedVariants[variantIndex] = {
+          ...updatedVariants[variantIndex],
+          [name]: value,
+          isPriceManualEdit: true,
         } as Variant;
       } else {
         // For other fields, reset isManualEdit if originalPrice changes
@@ -411,6 +439,10 @@ const AddProductManagement = () => {
             name === "originalPrice"
               ? false
               : updatedVariants[variantIndex].isManualEdit,
+          isPriceManualEdit:
+            name === "originalPrice"
+              ? false
+              : updatedVariants[variantIndex].isPriceManualEdit,
         } as Variant;
       }
 
@@ -418,10 +450,16 @@ const AddProductManagement = () => {
     });
   };
 
-  const handleAttributeChange = (variantIndex: number, attrIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAttributeChange = (
+    variantIndex: number,
+    attrIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const { name, value } = e.target;
     const updatedVariants = [...product.variants];
-    updatedVariants[variantIndex].attributes[attrIndex][name as keyof Attribute] = value;
+    updatedVariants[variantIndex].attributes[attrIndex][
+      name as keyof Attribute
+    ] = value;
     setProduct((prev) => ({ ...prev, variants: updatedVariants }));
   };
 
@@ -435,6 +473,7 @@ const AddProductManagement = () => {
           price: "",
           stock: "",
           originalPrice: "",
+          sellingpriceWithoutCommission: "",
           sellingprice: "",
           attributes: [{ key: "size", value: "" }],
           images: [],
@@ -465,7 +504,10 @@ const AddProductManagement = () => {
   };
 
   // Handle variant image change
-  const handleVariantImageChange = (variantIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVariantImageChange = (
+    variantIndex: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = Array.from(e.target.files || []);
     setProduct((prev) => {
       const updatedVariants = [...prev.variants];
@@ -483,7 +525,9 @@ const AddProductManagement = () => {
       const updatedVariants = [...prev.variants];
       updatedVariants[variantIndex] = {
         ...updatedVariants[variantIndex],
-        images: updatedVariants[variantIndex].images.filter((_, i) => i !== imageIndex),
+        images: updatedVariants[variantIndex].images.filter(
+          (_, i) => i !== imageIndex
+        ),
       } as Variant;
       return { ...prev, variants: updatedVariants };
     });
@@ -492,18 +536,22 @@ const AddProductManagement = () => {
   // Handle drag end for variant images
   const handleDragEnd = (variantIndex: number, event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
       setProduct((prev) => {
         const updatedVariants = [...prev.variants];
         const oldIndex = active.id as number;
         const newIndex = over.id as number;
-        
+
         updatedVariants[variantIndex] = {
           ...updatedVariants[variantIndex],
-          images: arrayMove(updatedVariants[variantIndex].images, oldIndex, newIndex),
+          images: arrayMove(
+            updatedVariants[variantIndex].images,
+            oldIndex,
+            newIndex
+          ),
         } as Variant;
-        
+
         return { ...prev, variants: updatedVariants };
       });
     }
@@ -522,19 +570,22 @@ const AddProductManagement = () => {
       const formData = new FormData();
       formData.append("name", product.name);
       formData.append("description", product.description);
-      formData.append("keywords", keywords.map(k => k.text).join(', ')); // Add keywords to form data
+      formData.append("keywords", keywords.map((k) => k.text).join(", ")); // Add keywords to form data
       formData.append("mainCategoryId", product.mainCategoryId);
       formData.append("subCategoryId", product.subCategoryId);
       formData.append("subSubCategoryId", product.subSubCategoryId);
       formData.append("vendorId", isAdmin ? product.vendorId : vendorId);
-      
-      // Add height, weight and attributes to variants
-      const variantsWithAdditionalData = product.variants.map(variant => ({
-        ...variant,
-        height: "10cm", // Default values, you may want to make these editable
-        weight: "500g",
-      }));
-      
+
+      // Add height, weight and attributes to variants, exclude sellingpriceWithoutCommission
+      const variantsWithAdditionalData = product.variants.map((variant) => {
+        // Destructure to exclude sellingpriceWithoutCommission
+        const {...variantData } = variant;
+        return {
+          ...variantData,
+         
+        };
+      });
+
       formData.append("variants", JSON.stringify(variantsWithAdditionalData));
 
       // Append images for each variant
@@ -549,7 +600,11 @@ const AddProductManagement = () => {
         const variant = product.variants[i];
         for (let j = 0; j < variant.images.length; j++) {
           if (variant.images[j].size > 5 * 1024 * 1024) {
-            toast.error(`Variant ${i + 1} Image "${variant.images[j].name}" exceeds 5MB size limit.`);
+            toast.error(
+              `Variant ${i + 1} Image "${
+                variant.images[j].name
+              }" exceeds 5MB size limit.`
+            );
             setIsLoading(false);
             return;
           }
@@ -617,19 +672,77 @@ const AddProductManagement = () => {
   };
 
   const handleKeywordsKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && product.keywords.trim() !== '') {
+    if (e.key === "Enter" && product.keywords.trim() !== "") {
       e.preventDefault();
       const newKeyword = {
         id: Date.now().toString(),
-        text: product.keywords.trim()
+        text: product.keywords.trim(),
       };
-      setKeywords(prev => [...prev, newKeyword]);
+      setKeywords((prev) => [...prev, newKeyword]);
       setProduct((prev) => ({ ...prev, keywords: "" }));
     }
   };
 
   const removeKeyword = (id: string) => {
-    setKeywords(prev => prev.filter(keyword => keyword.id !== id));
+    setKeywords((prev) => prev.filter((keyword) => keyword.id !== id));
+  };
+
+  // Add state for AI description loading
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
+  // Add function to generate AI description
+  const generateAIDescription = async () => {
+    // Validate that we have the required fields
+    if (!product.name || !product.mainCategoryId) {
+      toast.error("Please enter product name and select main category first");
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+
+    try {
+      const payload = {
+        productName: product.name,
+        mainCategoryId: parseInt(product.mainCategoryId),
+        subCategoryId: product.subCategoryId
+          ? parseInt(product.subCategoryId)
+          : undefined,
+        subSubCategoryId: product.subSubCategoryId
+          ? parseInt(product.subSubCategoryId)
+          : undefined,
+      };
+
+      const response = await axios.post<AIDescriptionResponse>(
+        `${import.meta.env.VITE_BASE_UR}public/ai-description-generator`,
+        payload,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        // Set the description in the editor
+        setProduct((prev) => ({ ...prev, description: response.data.data }));
+        toast.success("AI description generated successfully!");
+      } else {
+        toast.error("Failed to generate AI description");
+      }
+    } catch (error) {
+      console.error("Error generating AI description:", error);
+      let message = "Error generating AI description.";
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          message = error.response.data.message;
+        } else if (error.response?.data?.error) {
+          message = error.response.data.error;
+        }
+      }
+      toast.error(message);
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   if (loadingCategories) {
@@ -690,7 +803,7 @@ const AddProductManagement = () => {
                     className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500 sm:text-sm"
                   />
                 </div>
-                 <div>
+                <div>
                   <label
                     htmlFor="mainCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -713,12 +826,9 @@ const AddProductManagement = () => {
                     ))}
                   </select>
                 </div>
-
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-               
-
                 <div>
                   <label
                     htmlFor="subCategoryId"
@@ -743,7 +853,7 @@ const AddProductManagement = () => {
                     ))}
                   </select>
                 </div>
-                   <div>
+                <div>
                   <label
                     htmlFor="subSubCategoryId"
                     className="block text-sm font-medium text-gray-700"
@@ -769,8 +879,6 @@ const AddProductManagement = () => {
               </div>
 
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-             
-
                 {isAdmin && (
                   <div>
                     <label
@@ -802,13 +910,61 @@ const AddProductManagement = () => {
                 <input type="hidden" name="vendorId" value={vendorId} />
               )}
 
+              {/* Commission info removed per simplified pricing requirements */}
+
               <div>
-                <label
-                  htmlFor="description"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Description <span className="text-red-500">*</span>
-                </label>
+                <div className="flex justify-between items-center mb-10">
+                  <label
+                    htmlFor="description"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={generateAIDescription}
+                    disabled={
+                      isGeneratingDescription ||
+                      !product.name ||
+                      !product.mainCategoryId
+                    }
+                    className={`inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                      isGeneratingDescription ||
+                      !product.name ||
+                      !product.mainCategoryId
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    }`}
+                  >
+                    {isGeneratingDescription ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      "Generate AI Description"
+                    )}
+                  </button>
+                </div>
                 <JoditEditor
                   ref={editor}
                   value={product.description}
@@ -816,9 +972,9 @@ const AddProductManagement = () => {
                   onBlur={(newContent) =>
                     setProduct((prev) => ({ ...prev, description: newContent }))
                   }
-                  className="mt-1 bg-white"
+                  className="mt-5 bg-white"
                 />
-                
+
                 {/* Keywords section moved here, below description */}
                 <div className="mt-4">
                   <label
@@ -831,8 +987,8 @@ const AddProductManagement = () => {
                     {keywords.length > 0 && (
                       <div className="flex flex-wrap gap-2 mb-2">
                         {keywords.map((keyword) => (
-                          <span 
-                            key={keyword.id} 
+                          <span
+                            key={keyword.id}
                             className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                           >
                             {keyword.text}
@@ -842,8 +998,17 @@ const AddProductManagement = () => {
                               className="flex-shrink-0 ml-1.5 h-4 w-4 rounded-full inline-flex items-center justify-center text-blue-400 hover:bg-blue-200 hover:text-blue-500 focus:outline-none focus:bg-blue-500 focus:text-white"
                             >
                               <span className="sr-only">Remove keyword</span>
-                              <svg className="h-2 w-2" stroke="currentColor" fill="none" viewBox="0 0 8 8">
-                                <path strokeLinecap="round" strokeWidth="1.5" d="M1 1l6 6m0-6L1 7" />
+                              <svg
+                                className="h-2 w-2"
+                                stroke="currentColor"
+                                fill="none"
+                                viewBox="0 0 8 8"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeWidth="1.5"
+                                  d="M1 1l6 6m0-6L1 7"
+                                />
                               </svg>
                             </button>
                           </span>
@@ -912,7 +1077,7 @@ const AddProductManagement = () => {
                             htmlFor={`sku-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            Varient Name <span className="text-red-500">*</span>
+                            Variant Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -952,7 +1117,7 @@ const AddProductManagement = () => {
                             htmlFor={`originalPrice-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            MPR <span className="text-red-500">*</span>
+                            MRP <span className="text-red-500">*</span>
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -979,10 +1144,44 @@ const AddProductManagement = () => {
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div>
                           <label
+                            htmlFor={`sellingpriceWithoutCommission-${variantIndex}`}
+                            className="block text-sm font-medium text-gray-700 mt-2"
+                          >
+                            Selling Price (Without Commission){" "}
+                            <span className="text-red-500">*</span>
+                          </label>
+                          <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500 sm:text-sm">
+                                ₹
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              id={`sellingpriceWithoutCommission-${variantIndex}`}
+                              name="sellingpriceWithoutCommission"
+                              value={variant.sellingpriceWithoutCommission || ""}
+                              onChange={(e) =>
+                                handleVariantChange(variantIndex, e)
+                              }
+                              required
+                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500"
+                              placeholder="0.00"
+                              min="0"
+                            />
+                          </div>
+                          {commission && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Enter base price (commission will be added automatically)
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label
                             htmlFor={`sellingprice-${variantIndex}`}
                             className="block text-sm font-medium text-gray-700 mt-2"
                           >
-                            Selling Price{" "}
+                            Selling Price (With Commission){" "}
                             <span className="text-red-500">*</span>
                           </label>
                           <div className="mt-1 relative rounded-md shadow-sm">
@@ -1000,11 +1199,21 @@ const AddProductManagement = () => {
                                 handleVariantChange(variantIndex, e)
                               }
                               required
-                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3"
+                              readOnly={commission !== null && !!variant.sellingpriceWithoutCommission}
+                              className={`border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 ${
+                                commission !== null && !!variant.sellingpriceWithoutCommission
+                                  ? "bg-gray-100 cursor-not-allowed"
+                                  : "focus:outline-none focus:ring-gold-500 focus:border-gold-500"
+                              }`}
                               placeholder="0.00"
                               min="0"
                             />
                           </div>
+                          {commission && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              Admin commission: {commission}%
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label
@@ -1024,9 +1233,12 @@ const AddProductManagement = () => {
                               id={`price-${variantIndex}`}
                               name="price"
                               value={variant.price}
-                              
-                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 "
+                              onChange={(e) =>
+                                handleVariantChange(variantIndex, e)
+                              }
+                              className="border border-gray-300 block w-[300px] pl-7 pr-4 sm:text-sm rounded-md py-2 px-3 focus:outline-none focus:ring-gold-500 focus:border-gold-500"
                               placeholder="0.00"
+                              min="0"
                             />
                           </div>
                         </div>
@@ -1132,7 +1344,9 @@ const AddProductManagement = () => {
                         </label>
                         <input
                           type="file"
-                          onChange={(e) => handleVariantImageChange(variantIndex, e)}
+                          onChange={(e) =>
+                            handleVariantImageChange(variantIndex, e)
+                          }
                           multiple
                           className="hidden"
                           accept="image/*"
@@ -1168,13 +1382,15 @@ const AddProductManagement = () => {
                             </p>
                           </div>
                         </div>
-                        
+
                         {/* Draggable image previews */}
                         {variant.images.length > 0 && (
                           <DndContext
                             sensors={sensors}
                             collisionDetection={closestCenter}
-                            onDragEnd={(event) => handleDragEnd(variantIndex, event)}
+                            onDragEnd={(event) =>
+                              handleDragEnd(variantIndex, event)
+                            }
                           >
                             <SortableContext
                               items={variant.images.map((_, index) => index)}
@@ -1187,7 +1403,9 @@ const AddProductManagement = () => {
                                     id={imageIndex}
                                     image={image}
                                     index={imageIndex}
-                                    onRemove={(index) => removeVariantImage(variantIndex, index)}
+                                    onRemove={(index) =>
+                                      removeVariantImage(variantIndex, index)
+                                    }
                                   />
                                 ))}
                               </div>

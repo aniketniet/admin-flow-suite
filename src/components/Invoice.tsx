@@ -332,7 +332,7 @@ const InvoicePreview = ({ order, onClose }) => {
           <table className="w-full text-sm border-collapse border-y-2 border-black">
             <thead>
               <tr className="text-left">
-                <th className="p-1">Sl No</th>
+                <th className="p-1">S.No</th>
                 <th className="p-1 w-2/5">Description</th>
                 <th className="p-1 text-right">Unit Price</th>
                 <th className="p-1 text-right">Qty</th>
@@ -406,18 +406,9 @@ const InvoicePreview = ({ order, onClose }) => {
           <div className="mt-8 text-sm">
             <p>
               <span className="font-bold">Payment Mode:</span>{" "}
-              {order.paymentMode === "COD"
-                ? "Cash on Delivery"
-                : order.paymentMode}
+              {order.paymentMode}
             </p>
-            <p>
-              <span className="font-bold">Order Status:</span>{" "}
-              {order.orderStatus}
-            </p>
-            <p className="mt-2 font-semibold">
-              GST Type:{" "}
-              {isSameState ? "CGST + SGST (Intra-State)" : "IGST (Inter-State)"}
-            </p>
+           
           </div>
 
           {/* <div className="flex justify-between items-end mt-16">

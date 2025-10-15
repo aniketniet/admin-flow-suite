@@ -72,7 +72,12 @@ const VendorProfile = () => {
         }
       );
 
-      setUserData(response.data.vendor);
+      // Update the userData with the new verification status
+      setUserData({
+        ...userData,
+        is_verified: true,
+        ...response.data.vendor
+      });
       toast.success("Vendor verified successfully");
     } catch (err: unknown) {
       // Extract error message from axios error response if available
@@ -110,7 +115,12 @@ const VendorProfile = () => {
         }
       );
 
-      setUserData(response.data.vendor);
+      // Update the userData with the new status
+      setUserData({
+        ...userData,
+        status: response.data.vendor.status,
+        ...response.data.vendor
+      });
       toast.success("Vendor status updated successfully");
     } catch (err: unknown) {
       // Extract error message from axios error response if available
@@ -251,8 +261,8 @@ const VendorProfile = () => {
                 </div>
               </div>
               <div className="flex space-x-3">
-                {/* Show Verified badge when vendor is active, otherwise show Verify button */}
-                {userData?.status && userData.status.toUpperCase() === "ACTIVE" ? (
+                {/* Show Verified badge when vendor is verified, otherwise show Verify button */}
+                {userData?.is_verified ? (
                   <span className="inline-flex items-center px-4 py-2 rounded-lg bg-green-100 text-green-800 font-medium">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -318,7 +328,7 @@ const VendorProfile = () => {
                   </button>
                 )}
                 
-                {/* Active/Inactive toggle button */}
+                {/* Active/Inactive toggle button - always visible */}
                 <button
                   onClick={updateVendorStatus}
                   disabled={togglingStatus || !userData}
@@ -377,7 +387,7 @@ const VendorProfile = () => {
                     viewBox="0 0 20 20"
                     fill="currentColor"
                   >
-                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
+                    <path d="M8 9a3 3 0 110-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6z" />
                   </svg>
                   View Activity
                 </button>

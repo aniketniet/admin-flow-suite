@@ -77,7 +77,7 @@ const [errors, setErrors] = useState({
   const isPrescriptionImage = prescriptionExt && ["jpg","jpeg","png","gif","webp","svg"].includes(prescriptionExt);
   const isPrescriptionPdf = prescriptionExt === "pdf";
 
-  useEffect(() => {
+
     const fetchOrderDetails = async () => {
       try {
         const url = isAdmin
@@ -96,6 +96,7 @@ const [errors, setErrors] = useState({
         setLoading(false);
       }
     };
+      useEffect(() => {
 
     fetchOrderDetails();
   }, [orderId, token, isAdmin, isVendor]);
@@ -187,6 +188,7 @@ const [errors, setErrors] = useState({
       if (data.success && data.label_url) {
         toast.success("ShipRocket order created successfully");
         window.open(data.label_url, "_blank");
+             fetchOrderDetails(); // Refresh order details to show new shipment
         // Optionally update the order status in the UI
       }
     } catch (error) {
@@ -388,14 +390,16 @@ const [errors, setErrors] = useState({
             >
               {order.orderStatus}
             </span> */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowInvoice(true)}
-              className=" bg-green-600 text-white hover:bg-green-700 hover:text-white"
-            >
-              Download Invoice
-            </Button>
+            {isVendor && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowInvoice(true)}
+                className=" bg-green-600 text-white hover:bg-green-700 hover:text-white"
+              >
+                Download Invoice
+              </Button>
+            )}
           </div>
         </div>
 
